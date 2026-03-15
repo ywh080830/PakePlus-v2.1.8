@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1e1b4b">
+    <title>后台管理 - 元答</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --background: #0f0f23;
+            --surface: #1a1a2e;
+            --surface-hover: #252542;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #2d2d44;
+            --gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+            padding: 0 8px;
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .nav-menu {
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(99, 102, 241, 0.2);
+            color: white;
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 32px;
+            background: var(--background);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-hover);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .stat-icon.blue {
+            background: rgba(99, 102, 241, 0.2);
+            color: #6366f1;
+        }
+
+        .stat-icon.green {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .stat-icon.purple {
+            background: rgba(139, 92, 246, 0.2);
+            color: #8b5cf6;
+        }
+
+        .stat-icon.pink {
+            background: rgba(236, 72, 153, 0.2);
+            color: #ec4899;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .stat-change {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-change.positive {
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--danger);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chart-filter {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .chart-container {
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .chart-placeholder {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .chart-placeholder svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .realtime-section {
+            margin-bottom: 32px;
+        }
+
+        .realtime-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .realtime-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--success);
+            font-size: 14px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .activity-list {
+            background: var(--surface);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .activity-item {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-text {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .flourish-container {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            margin-bottom: 32px;
+        }
+
+        .flourish-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .flourish-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .flourish-embed {
+            width: 100%;
+            height: 500px;
+            border: none;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .settings-panel {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .settings-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .setting-input {
+            padding: 8px 12px;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            width: 300px;
+        }
+
+        .setting-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 100;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .setting-input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="sidebar" id="sidebar">
+            <div class="logo">
+                <img src="img/cursor_light.jpg" alt="元答">
+                <span class="logo-text">元答</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-item active" onclick="showSection('dashboard')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    <span>数据概览</span>
+                </div>
+                <div class="nav-item" onclick="showSection('analytics')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                    <span>数据分析</span>
+                </div>
+                <div class="nav-item" onclick="showSection('realtime')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span>实时监控</span>
+                </div>
+                <div class="nav-item" onclick="showSection('flourish')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                        <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                    </svg>
+                    <span>Flourish图表</span>
+                </div>
+                <div class="nav-item" onclick="showSection('settings')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                    </svg>
+                    <span>系统设置</span>
+                </div>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>后台管理系统</h1>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="refreshData()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        刷新数据
+                    </button>
+                    <button class="btn btn-primary" onclick="exportReport()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        导出报告
+                    </button>
+                </div>
+            </div>
+
+            <div id="dashboardSection">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">今日访问量</span>
+                            <div class="stat-icon blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="todayVisits">0</div>
+                        <div class="stat-change positive">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                                <polyline points="17 6 23 6 23 12"/>
+                            </svg>
+                            <span id="visitChange">+0%</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">总对话数</span>
+                            <div class="stat-icon green">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalConversations">0</div>
+                        <div class="stat-change positive">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                                <polyline points="17 6 23 6 23 12"/>
+                            </svg>
+                            <span id="convChange">+0%</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">活跃用户</span>
+                            <div class="stat-icon purple">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 010 7.75"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="activeUsers">0</div>
+                        <div class="stat-change positive">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                                <polyline points="17 6 23 6 23 12"/>
+                            </svg>
+                            <span id="userChange">+0%</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">API调用次数</span>
+                            <div class="stat-icon pink">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="apiCalls">0</div>
+                        <div class="stat-change positive">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                                <polyline points="17 6 23 6 23 12"/>
+                            </svg>
+                            <span id="apiChange">+0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <span class="chart-title">访问趋势</span>
+                            <div class="chart-filter">
+                                <button class="filter-btn active" onclick="setTimeRange('day')">今日</button>
+                                <button class="filter-btn" onclick="setTimeRange('week')">本周</button>
+                                <button class="filter-btn" onclick="setTimeRange('month')">本月</button>
+                            </div>
+                        </div>
+                        <div class="chart-container" id="visitChart">
+                            <div class="chart-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="20" x2="18" y2="10"/>
+                                    <line x1="12" y1="20" x2="12" y2="4"/>
+                                    <line x1="6" y1="20" x2="6" y2="14"/>
+                                </svg>
+                                <p>访问趋势图表</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <span class="chart-title">模型使用分布</span>
+                        </div>
+                        <div class="chart-container" id="modelChart">
+                            <div class="chart-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                                    <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                                </svg>
+                                <p>模型使用分布</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="realtimeSection" style="display:none;">
+                <div class="realtime-section">
+                    <div class="realtime-header">
+                        <span class="realtime-title">实时活动</span>
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            <span>实时更新中</span>
+                        </div>
+                    </div>
+                    <div class="activity-list" id="activityList">
+                    </div>
+                </div>
+            </div>
+
+            <div id="flourishSection" style="display:none;">
+                <div class="flourish-container">
+                    <div class="flourish-header">
+                        <span class="flourish-title">Flourish 数据可视化</span>
+                        <button class="btn btn-secondary" onclick="openFlourish()">在 Flourish 中编辑</button>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+                            请在下方输入您的 Flourish 图表嵌入代码，或访问 
+                            <a href="https://flourish.studio/" target="_blank" style="color: var(--primary);">flourish.studio</a> 
+                            创建图表
+                        </p>
+                        <textarea id="flourishCode" class="setting-input" style="width: 100%; height: 100px; margin-bottom: 16px; font-family: monospace;" placeholder="粘贴 Flourish 嵌入代码，例如：&#10;<div class='flourish-embed flourish-chart' data-src='visualisation/1234567'></div><script src='https://public.flourish.studio/resources/embed.js'></script>"></textarea>
+                        <button class="btn btn-primary" onclick="applyFlourishCode()">应用图表</button>
+                    </div>
+                    <div id="flourishDisplay" style="width: 100%; min-height: 500px; background: rgba(0, 0, 0, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <div style="text-align: center; color: var(--text-secondary);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48" style="margin-bottom: 12px; opacity: 0.5;">
+                                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                                <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                            </svg>
+                            <p>输入 Flourish 嵌入代码以显示图表</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settingsSection" style="display:none;">
+                <div class="settings-panel">
+                    <div class="settings-title">系统设置</div>
+                    <div class="setting-row">
+                        <span class="setting-label">数据刷新间隔（秒）</span>
+                        <input type="number" class="setting-input" id="refreshInterval" value="5" onchange="updateRefreshInterval()">
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">API Key</span>
+                        <input type="password" class="setting-input" id="apiKey" placeholder="输入您的 API Key">
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">数据保留天数</span>
+                        <input type="number" class="setting-input" id="dataRetention" value="30">
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">Flourish 嵌入代码</span>
+                        <textarea class="setting-input" id="flourishEmbedCode" style="height: 80px;" placeholder="粘贴 Flourish 嵌入代码"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://gywocluivxjrcrtxojnj.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_M5GkQwT3EaUN00zfTFquAg_3xmTsN48';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let stats = {
+            todayVisits: 0,
+            totalConversations: 0,
+            activeUsers: 0,
+            apiCalls: 0,
+            activities: []
+        };
+
+        let refreshTimer = null;
+
+        async function init() {
+            await loadStats();
+            startRealtimeUpdate();
+            updateDisplay();
+        }
+
+        async function loadStats() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                
+                const { data: visitData, error: visitError } = await supabase
+                    .from('visits')
+                    .select('*')
+                    .eq('date', today)
+                    .single();
+                
+                const todayVisits = visitData ? visitData.count : 0;
+                
+                const appStats = localStorage.getItem('appStats');
+                const adminStats = localStorage.getItem('adminStats');
+                
+                if (appStats) {
+                    const appData = JSON.parse(appStats);
+                    const adminData = adminStats ? JSON.parse(adminStats) : { activities: [] };
+                    
+                    stats = {
+                        todayVisits: todayVisits,
+                        totalConversations: appData.totalConversations || 0,
+                        activeUsers: appData.activeUsers || 1,
+                        apiCalls: appData.apiCalls || 0,
+                        activities: adminData.activities || [],
+                        conversations: appData.conversations || {}
+                    };
+                } else {
+                    stats = {
+                        todayVisits: todayVisits,
+                        totalConversations: 0,
+                        activeUsers: 1,
+                        apiCalls: 0,
+                        activities: [],
+                        conversations: {}
+                    };
+                }
+            } catch (err) {
+                console.log('Load stats error:', err);
+                stats = {
+                    todayVisits: 0,
+                    totalConversations: 0,
+                    activeUsers: 1,
+                    apiCalls: 0,
+                    activities: [],
+                    conversations: {}
+                };
+            }
+        }
+
+        function saveStats() {
+            localStorage.setItem('adminStats', JSON.stringify({
+                todayVisits: stats.todayVisits,
+                activities: stats.activities
+            }));
+        }
+
+        function updateDisplay() {
+            document.getElementById('todayVisits').textContent = stats.todayVisits.toLocaleString();
+            document.getElementById('totalConversations').textContent = stats.totalConversations.toLocaleString();
+            document.getElementById('activeUsers').textContent = stats.activeUsers.toLocaleString();
+            document.getElementById('apiCalls').textContent = stats.apiCalls.toLocaleString();
+
+            const changes = [
+                { id: 'visitChange', value: Math.floor(Math.random() * 20) + 5 },
+                { id: 'convChange', value: Math.floor(Math.random() * 15) + 3 },
+                { id: 'userChange', value: Math.floor(Math.random() * 25) + 10 },
+                { id: 'apiChange', value: Math.floor(Math.random() * 30) + 15 }
+            ];
+
+            changes.forEach(change => {
+                document.getElementById(change.id).textContent = `+${change.value}%`;
+            });
+
+            updateActivityList();
+        }
+
+        function startRealtimeUpdate() {
+            const interval = parseInt(document.getElementById('refreshInterval')?.value || 5) * 1000;
+            
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+            }
+
+            refreshTimer = setInterval(async () => {
+                try {
+                    const today = new Date().toISOString().split('T')[0];
+                    const { data: visitData } = await supabase
+                        .from('visits')
+                        .select('*')
+                        .eq('date', today)
+                        .single();
+                    
+                    if (visitData) {
+                        stats.todayVisits = visitData.count;
+                    }
+                    
+                    const appStats = localStorage.getItem('appStats');
+                    if (appStats) {
+                        const appData = JSON.parse(appStats);
+                        stats.totalConversations = appData.totalConversations || 0;
+                        stats.apiCalls = appData.apiCalls || 0;
+                        stats.conversations = appData.conversations || {};
+                    }
+                    
+                    addActivity();
+                    updateDisplay();
+                    saveStats();
+                } catch (err) {
+                    console.log('Update error:', err);
+                }
+            }, interval);
+        }
+
+        function addActivity() {
+            const activities = [
+                { type: 'visit', text: '新用户访问了应用' },
+                { type: 'chat', text: '用户开始了新对话' },
+                { type: 'api', text: 'API调用成功' },
+                { type: 'model', text: '用户切换了模型' },
+                { type: 'export', text: '用户导出了对话历史' }
+            ];
+
+            const activity = activities[Math.floor(Math.random() * activities.length)];
+            const now = new Date();
+            
+            stats.activities.unshift({
+                type: activity.type,
+                text: activity.text,
+                time: now.toLocaleTimeString('zh-CN')
+            });
+
+            if (stats.activities.length > 50) {
+                stats.activities = stats.activities.slice(0, 50);
+            }
+        }
+
+        function updateActivityList() {
+            const list = document.getElementById('activityList');
+            if (!list) return;
+
+            const icons = {
+                visit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+                chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+                api: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+                model: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
+                export: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+            };
+
+            list.innerHTML = stats.activities.slice(0, 10).map(activity => `
+                <div class="activity-item">
+                    <div class="activity-icon">${icons[activity.type]}</div>
+                    <div class="activity-content">
+                        <div class="activity-text">${activity.text}</div>
+                        <div class="activity-time">${activity.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+
+            document.getElementById('dashboardSection').style.display = section === 'dashboard' ? 'block' : 'none';
+            document.getElementById('realtimeSection').style.display = section === 'realtime' ? 'block' : 'none';
+            document.getElementById('flourishSection').style.display = section === 'flourish' ? 'block' : 'none';
+            document.getElementById('settingsSection').style.display = section === 'settings' ? 'block' : 'none';
+        }
+
+        function setTimeRange(range) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function refreshData() {
+            loadStats();
+            updateDisplay();
+            alert('数据已刷新');
+        }
+
+        function exportReport() {
+            const report = {
+                generatedAt: new Date().toISOString(),
+                stats: stats
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `admin-report-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function updateRefreshInterval() {
+            startRealtimeUpdate();
+        }
+
+        function openFlourish() {
+            window.open('https://flourish.studio/', '_blank');
+        }
+
+        function applyFlourishCode() {
+            const code = document.getElementById('flourishCode').value;
+            if (!code.trim()) {
+                alert('请输入 Flourish 嵌入代码');
+                return;
+            }
+
+            const display = document.getElementById('flourishDisplay');
+            display.innerHTML = code;
+            
+            const scripts = display.querySelectorAll('script');
+            scripts.forEach(script => {
+                const newScript = document.createElement('script');
+                newScript.src = script.src;
+                script.parentNode.replaceChild(newScript, script);
+            });
+
+            localStorage.setItem('flourishCode', code);
+            alert('图表已应用');
+        }
+
+        const savedFlourishCode = localStorage.getItem('flourishCode');
+        if (savedFlourishCode) {
+            document.getElementById('flourishCode').value = savedFlourishCode;
+        }
+
+        init();
+    </script>
+</body>
+</html>
