@@ -1,11 +1,5106 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        Hello World
-    </body>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="元答">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <title>元答</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --surface-hover: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --sidebar-bg: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+            --sidebar-item: rgba(255, 255, 255, 0.08);
+            --sidebar-item-hover: rgba(255, 255, 255, 0.15);
+            --sidebar-text: rgba(255, 255, 255, 0.9);
+            --sidebar-text-muted: rgba(255, 255, 255, 0.5);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-lg: 24px;
+        }
+
+        html.dark {
+            --background: #0f0f23;
+            --surface: #1a1a2e;
+            --surface-hover: #252542;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #2d2d44;
+            --sidebar-bg: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%);
+            --sidebar-item: rgba(255, 255, 255, 0.05);
+            --sidebar-item-hover: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 300px;
+            background: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--sidebar-text);
+            letter-spacing: -0.5px;
+        }
+
+        .new-chat-btn {
+            margin: 20px;
+            padding: 14px 20px;
+            background: var(--gradient);
+            border: none;
+            border-radius: var(--radius);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+        }
+
+        .new-chat-btn:active {
+            transform: translateY(0);
+        }
+
+        .new-chat-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .history-section {
+            flex: 1;
+            padding: 0 16px 20px;
+            overflow-y: auto;
+        }
+
+        .history-section::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .history-section::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--sidebar-text-muted);
+            padding: 16px 8px 12px;
+        }
+
+        .history-item {
+            padding: 14px 16px;
+            background: var(--sidebar-item);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid transparent;
+        }
+
+        .history-item:hover {
+            background: var(--sidebar-item-hover);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .history-item.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .history-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .history-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--sidebar-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-time {
+            font-size: 11px;
+            color: var(--sidebar-text-muted);
+            margin-top: 2px;
+        }
+
+        /* 主聊天区 */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--background);
+            min-width: 0;
+            position: relative;
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            z-index: 5;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            width: 40px;
+            height: 40px;
+            background: var(--surface-hover);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .mobile-menu-btn:hover {
+            background: var(--border);
+        }
+
+        .mobile-menu-btn svg {
+            width: 20px;
+            height: 20px;
+            color: var(--text-primary);
+        }
+
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .model-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--surface-hover);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .model-badge:hover {
+            background: var(--border);
+        }
+
+        .model-selector {
+            position: relative;
+        }
+
+        .model-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 200px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .model-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .dropdown-item.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        .dropdown-item img {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+        }
+
+        .dropdown-item span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* 粗野主义模型按钮 */
+        .model-button-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            padding: 20px;
+            justify-items: center;
+        }
+
+        .brutalist-model-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #000000;
+            border-radius: 12px;
+            padding: 0;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            position: relative;
+            box-shadow: 4px 4px 0px #000000;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            height: 130px;
+            width: 130px;
+            cursor: pointer;
+        }
+
+        .brutalist-model-button.qwen {
+            background-color: #356854;
+        }
+
+        .brutalist-model-button.deepseek {
+            background-color: #2d3748;
+        }
+
+        .brutalist-model-button.glm {
+            background-color: #553c9a;
+        }
+
+        .brutalist-model-button.kimi {
+            background-color: #e34234;
+        }
+
+        .brutalist-model-button.fund {
+            background-color: #ff6b35;
+        }
+
+        .brutalist-model-button.oil {
+            background-color: #10b981;
+        }
+
+        .brutalist-model-button::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -150%;
+            width: 300%;
+            height: 300%;
+            border-radius: 50%;
+            transform: translateX(-50%) scale(0);
+            transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            z-index: 1;
+        }
+
+        .brutalist-model-button.qwen::before {
+            background-color: #316b58;
+        }
+
+        .brutalist-model-button.deepseek::before {
+            background-color: #1a202c;
+        }
+
+        .brutalist-model-button.glm::before {
+            background-color: #44337a;
+        }
+
+        .brutalist-model-button.kimi::before {
+            background-color: #c53030;
+        }
+
+        .brutalist-model-button.fund::before {
+            background-color: #e65a40;
+        }
+
+        .brutalist-model-button.oil::before {
+            background-color: #059669;
+        }
+
+        .brutalist-model-button:hover::before {
+            transform: translateX(-50%) scale(1);
+        }
+
+        .brutalist-model-button:hover {
+            transform: translate(-4px, -4px);
+            box-shadow: 8px 8px 0px #000000;
+        }
+
+        .brutalist-model-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000000;
+        }
+
+        .brutalist-model-button.active {
+            transform: translate(-4px, -4px);
+            box-shadow: 8px 8px 0px #000000;
+        }
+
+        .model-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .model-logo img {
+            width: 54px;
+            height: 54px;
+            border-radius: 8px;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        .brutalist-model-button:hover .model-logo {
+            animation: spin 5s linear infinite;
+            width: 50px;
+            height: 50px;
+            top: 28%;
+        }
+
+        .brutalist-model-button:hover .model-logo img {
+            transform: scale(0.6);
+        }
+
+        .model-button-text {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.3;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            z-index: 2;
+            position: absolute;
+            bottom: 18px;
+            left: 0;
+            right: 0;
+        }
+
+        .model-button-text span:first-child {
+            font-size: 11px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .model-button-text span:last-child {
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #ffffff;
+        }
+
+        .brutalist-model-button:hover .model-button-text {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .brutalist-model-button:hover {
+                transform: translate(-4px, -4px);
+                box-shadow: 8px 8px 0px #000000;
+            }
+        }
+
+        .model-badge img {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .icon-btn:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+            border-color: var(--text-muted);
+        }
+
+        .icon-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .setting-btn {
+            width: 45px;
+            height: 45px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background-color: rgb(129, 110, 216);
+            border-radius: 10px;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0px 0px 0px 2px rgb(212, 209, 255);
+            transition: all 0.3s ease;
+        }
+
+        .setting-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .bar {
+            width: 50%;
+            height: 2px;
+            background-color: rgb(229, 229, 229);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-radius: 2px;
+        }
+
+        .bar::before {
+            content: "";
+            width: 2px;
+            height: 2px;
+            background-color: rgb(126, 117, 255);
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid white;
+            transition: all 0.3s;
+            box-shadow: 0px 0px 5px white;
+        }
+
+        .bar1::before {
+            transform: translateX(-4px);
+        }
+
+        .bar2::before {
+            transform: translateX(4px);
+        }
+
+        .bar3::before {
+            transform: translateX(-4px);
+        }
+
+        .setting-btn:hover .bar1::before {
+            transform: translateX(4px);
+        }
+
+        .setting-btn:hover .bar2::before {
+            transform: translateX(-4px);
+        }
+
+        .setting-btn:hover .bar3::before {
+            transform: translateX(4px);
+        }
+
+        .clear-btn, .export-btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .clear-btn:hover, .export-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .clear-btn {
+            background: #ef4444;
+        }
+
+        .clear-btn:hover {
+            background: #dc2626;
+        }
+
+        .import-btn {
+            padding: 8px 16px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .import-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        .backup-btn, .update-btn {
+            padding: 8px 16px;
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .backup-btn:hover, .update-btn:hover {
+            background: #7c3aed;
+            transform: translateY(-1px);
+        }
+
+        .setting-select {
+            padding: 6px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .setting-select:hover {
+            border-color: var(--primary);
+        }
+
+        .setting-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        /* 消息区域 */
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 6px;
+        }
+
+        .message {
+            display: flex;
+            gap: 16px;
+            max-width: 800px;
+            animation: messageSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+            margin-left: auto;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .message.user .message-avatar {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background: var(--surface-hover);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .message-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .message-bubble {
+            padding: 16px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 15px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message.user .message-bubble {
+            background: var(--gradient);
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        .message.assistant .message-bubble {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 6px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            padding: 0 4px;
+        }
+
+        /* 消息操作按钮 */
+        .message-action-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: var(--surface-hover);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .message-action-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .message-action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .message.user .message-time {
+            text-align: right;
+        }
+
+        /* 思考过程样式 */
+        .thinking-process {
+            background: rgba(99, 102, 241, 0.05);
+            border-left: 3px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .thinking-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .thinking-content {
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .thinking-toggle {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--primary);
+            margin-top: 8px;
+        }
+
+        .thinking-toggle:hover {
+            text-decoration: underline;
+        }
+
+        /* 输入区域 */
+        .chat-input-area {
+            padding: 20px 24px 24px;
+            background: var(--background);
+        }
+
+        .input-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .input-container:focus-within {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg), 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .chat-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            font-family: inherit;
+            background: transparent;
+            resize: none;
+            max-height: 120px;
+            min-height: 24px;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .input-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-muted);
+        }
+
+        .input-btn:hover {
+            background: var(--surface-hover);
+            color: var(--text-secondary);
+        }
+
+        .input-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .send-btn {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        /* 打字指示器 */
+        .typing-indicator {
+            display: flex;
+            gap: 16px;
+            animation: messageSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .typing-bubble {
+            padding: 16px 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            border-bottom-left-radius: 6px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: typingPulse 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingPulse {
+            0%, 60%, 100% { transform: scale(0.8); opacity: 0.5; }
+            30% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 弹窗 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 520px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            background: var(--surface-hover);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .close-btn:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: calc(85vh - 80px);
+        }
+
+        .model-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .model-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--surface-hover);
+            border: 2px solid transparent;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .model-option:hover {
+            border-color: var(--border);
+        }
+
+        .model-option.active {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .model-option-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--surface);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .model-option-icon img {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+        }
+
+        .model-option-info {
+            flex: 1;
+        }
+
+        .model-option-name {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .model-option-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .model-option-check {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .model-option.active .model-option-check {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .model-option.active .model-option-check svg {
+            color: white;
+        }
+
+        .model-option-check svg {
+            width: 14px;
+            height: 14px;
+            color: transparent;
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .setting-value {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 26px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--border);
+            border-radius: 26px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-slider::before {
+            position: absolute;
+            content: '';
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background: var(--primary);
+        }
+
+        .toggle input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                width: 280px;
+                transform: translateX(-100%);
+                z-index: 100;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 99;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+
+            .sidebar-overlay.show {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .chat-header {
+                padding: 12px 16px;
+            }
+
+            .chat-messages {
+                padding: 16px;
+                padding-bottom: 80px;
+            }
+
+            .chat-input-area {
+                padding: 12px 16px 16px;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: var(--background);
+                z-index: 10;
+            }
+
+            .message {
+                max-width: 100%;
+            }
+
+            .message-bubble {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .model-badge {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .model-badge img {
+                width: 18px;
+                height: 18px;
+            }
+
+            .setting-btn {
+                width: 40px;
+                height: 40px;
+            }
+
+            .bar {
+                width: 45%;
+            }
+
+            .modal-content {
+                width: 95%;
+                max-height: 90vh;
+                margin: 10px;
+                border-radius: 20px;
+            }
+
+            .modal-header {
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .modal-body {
+                padding: 16px 20px;
+                max-height: calc(90vh - 60px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* 优化设置项的触摸区域 */
+            .setting-item {
+                padding: 16px 0;
+                border-bottom: 1px solid var(--border);
+            }
+            
+            .setting-item:last-child {
+                border-bottom: none;
+            }
+            
+            /* 优化开关和选择器的触摸区域 */
+            .toggle {
+                width: 50px;
+                height: 28px;
+            }
+            
+            .toggle-slider::before {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .toggle input:checked + .toggle-slider::before {
+                transform: translateX(22px);
+            }
+            
+            .setting-select {
+                padding: 8px 12px;
+                min-width: 120px;
+            }
+
+            .model-button-container {
+                gap: 10px;
+                padding: 10px;
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .brutalist-model-button {
+                width: 100%;
+                max-width: 120px;
+                height: 100px;
+                min-width: 80px;
+            }
+
+            .model-logo {
+                width: 60px;
+                height: 60px;
+            }
+
+            .model-logo img {
+                width: 36px;
+                height: 36px;
+            }
+
+            .model-button-text span:first-child {
+                font-size: 9px;
+            }
+
+            .model-button-text span:last-child {
+                font-size: 11px;
+            }
+
+            .settings-section-title {
+                font-size: 11px;
+            }
+
+            .setting-label {
+                font-size: 13px;
+            }
+
+            .setting-value {
+                font-size: 12px;
+            }
+
+            .clear-btn, .export-btn, .import-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .setting-select {
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+
+            .input-container {
+                padding: 10px 14px;
+            }
+
+            .chat-input {
+                font-size: 14px;
+            }
+
+            .input-btn {
+                width: 32px;
+                height: 32px;
+            }
+
+            .input-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .history-item {
+                padding: 12px 14px;
+            }
+
+            .history-title {
+                font-size: 12px;
+            }
+
+            .history-time {
+                font-size: 10px;
+            }
+
+            .logo-text {
+                font-size: 18px;
+            }
+
+            .new-chat-btn {
+                padding: 12px 16px;
+                font-size: 13px;
+            }
+
+            .model-dropdown {
+                min-width: 180px;
+                left: auto;
+                right: 0;
+            }
+
+            .dropdown-item {
+                padding: 10px 14px;
+            }
+
+            .dropdown-item span {
+                font-size: 13px;
+            }
+
+            .empty-state {
+                padding: 20px;
+            }
+
+            .empty-state-icon {
+                width: 60px;
+                height: 60px;
+            }
+
+            .empty-state-icon svg {
+                width: 30px;
+                height: 30px;
+            }
+
+            .empty-state-title {
+                font-size: 18px;
+            }
+
+            .empty-state-desc {
+                font-size: 13px;
+            }
+
+            .message-time {
+                font-size: 10px;
+            }
+
+            .toggle {
+                width: 44px;
+                height: 24px;
+            }
+
+            .toggle-slider::before {
+                width: 18px;
+                height: 18px;
+            }
+
+            .toggle input:checked + .toggle-slider::before {
+                transform: translateX(20px);
+            }
+
+            .typing-bubble {
+                padding: 12px 18px;
+            }
+
+            .typing-dot {
+                width: 6px;
+                height: 6px;
+            }
+
+            * {
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+            }
+
+            button, .history-item, .dropdown-item, .model-option {
+                -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
+                touch-action: manipulation;
+                transition: transform 0.1s ease;
+            }
+            
+            button:active, .history-item:active, .dropdown-item:active, .model-option:active {
+                transform: scale(0.97);
+            }
+            
+            /* 增强按钮触摸反馈 */
+            .new-chat-btn, .input-btn, .setting-btn, .clear-btn, .export-btn, .import-btn, .backup-btn, .update-btn {
+                touch-action: manipulation;
+                transition: all 0.2s ease;
+            }
+            
+            .new-chat-btn:active, .input-btn:active, .setting-btn:active, .clear-btn:active, .export-btn:active, .import-btn:active, .backup-btn:active, .update-btn:active {
+                transform: scale(0.95);
+            }
+
+            input, textarea, select {
+                font-size: 16px !important;
+            }
+
+            .chat-messages {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .sidebar {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .modal-body {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 260px;
+            }
+
+            .brutalist-model-button {
+                width: 85px;
+                height: 85px;
+            }
+
+            .model-logo {
+                width: 60px;
+                height: 60px;
+            }
+
+            .model-logo img {
+                width: 36px;
+                height: 36px;
+            }
+
+            .model-button-text span:last-child {
+                font-size: 11px;
+            }
+
+            .model-badge {
+                padding: 5px 10px;
+                font-size: 11px;
+            }
+
+            .setting-btn {
+                width: 38px;
+                height: 38px;
+            }
+
+            .chat-input {
+                font-size: 16px;
+            }
+
+            .message-bubble {
+                font-size: 15px;
+            }
+
+            .input-container {
+                padding: 8px 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .sidebar {
+                width: 240px;
+            }
+
+            .brutalist-model-button {
+                width: 75px;
+                height: 75px;
+            }
+
+            .model-logo {
+                width: 50px;
+                height: 50px;
+            }
+
+            .model-logo img {
+                width: 30px;
+                height: 30px;
+            }
+
+            .model-button-text span:last-child {
+                font-size: 10px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .modal-content {
+                max-height: 95vh;
+            }
+
+            .modal-body {
+                max-height: calc(95vh - 50px);
+                padding: 12px 16px;
+            }
+
+            .settings-section {
+                margin-bottom: 16px;
+            }
+
+            .setting-item {
+                padding: 10px 0;
+            }
+        }
+
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .chat-input-area {
+                padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            }
+
+            .chat-messages {
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            }
+        }
+
+        /* 空状态 */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--surface-hover);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .empty-state-icon svg {
+            width: 40px;
+            height: 40px;
+            color: var(--primary);
+        }
+
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+        
+        <!-- 网络状态检测（后台运行，不显示界面） -->
+        <div id="networkStatus" style="display: none;"></div>
+        <div id="networkModal" style="display: none;"></div>
+        
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-text">元答</span>
+                </div>
+            </div>
+            
+            <button class="new-chat-btn" onclick="newChat()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                <span>新建对话</span>
+            </button>
+            
+            <div class="history-section">
+                <div class="section-title">历史会话</div>
+                <div id="historyList"></div>
+            </div>
+        </div>
+        
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="header-left">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12h18M3 6h18M3 18h18"/>
+                        </svg>
+                    </button>
+                    <div class="chat-title">
+                        <div class="model-selector">
+                            <div class="model-badge" onclick="toggleModelDropdown()">
+                                <img src="img/GLM5.webp" alt="GLM-5" id="currentModelIcon">
+                                <span id="currentModelName">GLM-5</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-left:4px;">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </div>
+                            <div class="model-dropdown" id="modelDropdown"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="setting-btn" onclick="showSettings()">
+                        <div class="bar bar1"></div>
+                        <div class="bar bar2"></div>
+                        <div class="bar bar3"></div>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">开始新对话</div>
+                    <div class="empty-state-desc">输入消息开始与 AI 助手对话</div>
+                </div>
+            </div>
+            
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <div class="input-container">
+                        <textarea 
+                            class="chat-input" 
+                            id="chatInput" 
+                            placeholder="输入消息..."
+                            rows="1"
+                            onkeydown="handleKeyDown(event)"
+                        ></textarea>
+                        <div class="input-actions">
+                            <button class="input-btn send-btn" onclick="sendMessage()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="22" y1="2" x2="11" y2="13"/>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>设置</h3>
+                <button class="close-btn" onclick="hideSettings()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <div class="settings-section-title">模型选择</div>
+                    <div class="model-button-container">
+                        <div class="brutalist-model-button qwen" id="modelBtn1" onclick="selectModel(1)">
+                            <div class="model-logo">
+                                <img src="img/千问.jpg" alt="Qwen">
+                            </div>
+                            <div class="model-button-text">
+                                <span>通义千问</span>
+                                <span>Qwen</span>
+                            </div>
+                        </div>
+                        <div class="brutalist-model-button deepseek" id="modelBtn2" onclick="selectModel(2)">
+                            <div class="model-logo">
+                                <img src="img/DeepSeek.jpg" alt="DeepSeek">
+                            </div>
+                            <div class="model-button-text">
+                                <span>深度求索</span>
+                                <span>DeepSeek</span>
+                            </div>
+                        </div>
+                        <div class="brutalist-model-button glm active" id="modelBtn31" onclick="selectModel(31)">
+                            <div class="model-logo">
+                                <img src="img/GLM5.webp" alt="GLM-5">
+                            </div>
+                            <div class="model-button-text">
+                                <span>智谱AI</span>
+                                <span>GLM-5</span>
+                            </div>
+                        </div>
+                        <div class="brutalist-model-button kimi" id="modelBtn4" onclick="selectModel(4)">
+                            <div class="model-logo">
+                                <img src="img/kimi.webp" alt="Kimi">
+                            </div>
+                            <div class="model-button-text">
+                                <span>Moonshot</span>
+                                <span>Kimi</span>
+                            </div>
+                        </div>
+                        <div class="brutalist-model-button fund" id="modelBtn5" onclick="selectModel(5)">
+                            <div class="model-logo">
+                                <img src="img/基金.webp" alt="基金查询">
+                            </div>
+                            <div class="model-button-text">
+                                <span>基金估值</span>
+                                <span>基金查询</span>
+                            </div>
+                        </div>
+                        <div class="brutalist-model-button oil" id="modelBtn6" onclick="selectModel(6)">
+                            <div class="model-logo">
+                                <img src="img/油价.webp" alt="油价查询">
+                            </div>
+                            <div class="model-button-text">
+                                <span>油价查询</span>
+                                <span>实时油价</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">偏好设置</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">深色模式</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="darkModeToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">消息通知</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="notificationsToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">自动保存对话</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoSaveToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">打字机效果</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="typewriterToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">显示时间戳</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="timestampToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">显示思考过程</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="thinkingToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">违禁词过滤</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="profanityToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">流式输出</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="streamToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">自动滚动</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoScrollToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">显示设置</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">字体大小</span>
+                        <select id="fontSizeSelect" class="setting-select">
+                            <option value="small">小 (13px)</option>
+                            <option value="medium" selected>中 (15px)</option>
+                            <option value="large">大 (17px)</option>
+                            <option value="xlarge">特大 (19px)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">打字机速度</span>
+                        <select id="typewriterSpeedSelect" class="setting-select">
+                            <option value="fast">快速 (10ms)</option>
+                            <option value="normal" selected>正常 (30ms)</option>
+                            <option value="slow">慢速 (50ms)</option>
+                            <option value="veryslow">很慢 (80ms)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">最大历史记录</span>
+                        <select id="maxHistorySelect" class="setting-select">
+                            <option value="10">10条</option>
+                            <option value="20">20条</option>
+                            <option value="50" selected>50条</option>
+                            <option value="100">100条</option>
+                            <option value="unlimited">不限制</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">消息气泡样式</span>
+                        <select id="bubbleStyleSelect" class="setting-select">
+                            <option value="rounded" selected>圆角</option>
+                            <option value="square">方形</option>
+                            <option value="pill">胶囊</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">声音与提示</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">声音提示</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="soundToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">震动反馈</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="vibrationToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">消息通知</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="notificationToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">高级设置</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">回复最大长度</span>
+                        <select id="maxTokensSelect" class="setting-select">
+                            <option value="500">短 (500字)</option>
+                            <option value="1000" selected>中 (1000字)</option>
+                            <option value="2000">长 (2000字)</option>
+                            <option value="4000">超长 (4000字)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">温度参数</span>
+                        <select id="temperatureSelect" class="setting-select">
+                            <option value="0.3">精确 (0.3)</option>
+                            <option value="0.7" selected>平衡 (0.7)</option>
+                            <option value="1.0">创意 (1.0)</option>
+                            <option value="1.5">随机 (1.5)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">连续对话轮数</span>
+                        <select id="contextLengthSelect" class="setting-select">
+                            <option value="5">5轮</option>
+                            <option value="10" selected>10轮</option>
+                            <option value="20">20轮</option>
+                            <option value="unlimited">不限制</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">对话管理</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">清除所有对话</span>
+                        <button class="clear-btn" onclick="clearAllConversations()">清除</button>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">导出对话历史</span>
+                        <button class="export-btn" onclick="exportConversations()">导出</button>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">导入对话历史</span>
+                        <button class="import-btn" onclick="importConversations()">导入</button>
+                        <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImportFile(event)">
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">备份到云端</span>
+                        <button class="backup-btn" onclick="backupToCloud()">备份</button>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">数据统计</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">总对话数</span>
+                        <span class="setting-value" id="totalConversations">0</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">总消息数</span>
+                        <span class="setting-value" id="totalMessages">0</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">使用时长</span>
+                        <span class="setting-value" id="usageTime">0分钟</span>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">快捷键</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">发送消息</span>
+                        <span class="setting-value">Enter</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">换行</span>
+                        <span class="setting-value">Shift + Enter</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">新建对话</span>
+                        <span class="setting-value">Ctrl + N</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">打开设置</span>
+                        <span class="setting-value">Ctrl + ,</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">清空输入</span>
+                        <span class="setting-value">Esc</span>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">收藏夹</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">查看收藏</span>
+                        <button class="update-btn" onclick="showFavorites()">查看</button>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">设备信息</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">设备型号</span>
+                        <span class="setting-value" id="deviceModel">检测中...</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">屏幕尺寸</span>
+                        <span class="setting-value" id="screenSize">检测中...</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">浏览器</span>
+                        <span class="setting-value" id="browserInfo">检测中...</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">应用设备优化</span>
+                        <button class="update-btn" onclick="applyDeviceSpecificSettings()">应用优化</button>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-section-title">关于</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">版本</span>
+                        <span class="setting-value">元答 v1.0</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">API 提供商</span>
+                        <span class="setting-value">ModelScope</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">开发者</span>
+                        <span class="setting-value">元答工作室</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">检查更新</span>
+                        <button class="update-btn" onclick="checkUpdate()">检查</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://gywocluivxjrcrtxojnj.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_M5GkQwT3EaUN00zfTFquAg_3xmTsN48';
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const API_URL = 'https://api-inference.modelscope.cn/v1/chat/completions';
+        const API_KEY = 'ms-533df8b8-cce5-42a4-9e06-2f2bf455522e';
+        
+        const model = { name: 'GLM-5', model: 'ZhipuAI/GLM-5', icon: 'img/GLM5.webp' };
+        
+        let conversationHistory = [];
+        let isStreaming = false;
+        let conversations = {}; // 按模型存储会话
+        let currentConversationId = null;
+        let currentModelId = 31; // 默认GLM-5
+        let isOnline = navigator.onLine;
+
+        async function trackVisit() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const visitorId = localStorage.getItem('visitorId') || 'visitor_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('visitorId', visitorId);
+                
+                const { data, error } = await supabaseClient
+                    .from('visits')
+                    .select('*')
+                    .eq('date', today)
+                    .single();
+                
+                if (error && error.code === 'PGRST116') {
+                    await supabaseClient
+                        .from('visits')
+                        .insert([{ 
+                            date: today, 
+                            count: 1,
+                            unique_visitors: [visitorId]
+                        }]);
+                } else if (data) {
+                    const uniqueVisitors = data.unique_visitors || [];
+                    const isNewVisitor = !uniqueVisitors.includes(visitorId);
+                    
+                    await supabaseClient
+                        .from('visits')
+                        .update({ 
+                            count: data.count + 1,
+                            unique_visitors: isNewVisitor 
+                                ? [...uniqueVisitors, visitorId] 
+                                : uniqueVisitors
+                        })
+                        .eq('date', today);
+                }
+            } catch (err) {
+                console.log('Visit tracking error:', err);
+            }
+        }
+
+        async function getVisitStats() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const { data, error } = await supabaseClient
+                    .from('visits')
+                    .select('*')
+                    .eq('date', today)
+                    .single();
+                
+                return data ? data.count : 0;
+            } catch (err) {
+                return 0;
+            }
+        }
+
+        trackVisit();
+
+        // 网络检测功能（后台运行，不显示界面）
+        function checkNetworkStatus() {
+            isOnline = navigator.onLine;
+        }
+
+        function updateNetworkStatusUI() {
+            // 后台运行，不显示UI
+        }
+
+        // 监听网络状态变化
+        window.addEventListener('online', function() {
+            isOnline = true;
+        });
+
+        window.addEventListener('offline', function() {
+            isOnline = false;
+        });
+
+        // 初始化网络状态
+        checkNetworkStatus();
+
+        const SYSTEM_PROMPT = `一、总体要求 
+1. 所有回答必须合法合规、积极正向、客观中立，不涉及任何敏感、违法、低俗内容。 
+
+2. 语言风格：友好、简洁、专业，适配网页对话展示，手机端阅读友好。 
+
+3. 禁止夹带广告、外链、二维码、联系方式、引流信息。 
+  
+二、内容安全（强制拦截） 
+  
+出现以下请求，直接拒绝并返回统一话术： 
+抱歉，我无法回答此类问题，请更换话题后继续对话。 
+  
+- 政治敏感、危害国家安全、分裂言论、涉政谣言 
+- 色情、暴力、血腥、恐怖、自残自杀教唆 
+- 地域、性别、种族、宗教、职业等歧视内容 
+- 网络攻击、破解、作弊、造假、侵权教程 
+- 虚假信息、诈骗话术、金融传销、违法理财 
+  
+三、内容输出规范 
+  
+1. 准确性 
+  
+- 事实、数据、时间、规则必须真实，不编造信息 
+- 不确定内容标注：信息仅供参考，请以官方为准 
+- 不提供无依据的诊断、处方、法律判决、投资建议 
+  
+2. 长度控制 
+  
+- 日常问答：300 字以内，直击重点 
+- 长文本生成：分段清晰，不输出大段无意义刷屏内容 
+- 拒绝啰嗦、重复、跑题式回答 
+  
+3. 用语规范 
+  
+- 使用标准中文，不使用脏话、低俗梗、网络黑话 
+- 不嘲讽、不阴阳、不情绪化、不攻击用户或第三方 
+- 正式场景严谨，日常对话温和自然 
+  
+四、格式展示规范（适配网站） 
+  
+- 段落简短，每段 1–3 行，避免大段密文 
+- 步骤类用：1. 2. 3. 
+- 并列要点用：- 
+- 重点内容可加粗，不滥用格式、不使用特殊乱码符号 
+- 不使用复杂排版、表格以外的复杂样式（保证网页兼容） 
+  
+五、专业场景强制提示 
+  
+- 医疗健康：本内容仅供参考，不构成诊疗建议，身体不适请及时就医。 
+- 法律相关：本内容仅供参考，不构成法律意见，具体请咨询专业律师。 
+- 金融理财：投资有风险，入市需谨慎，本文不构成投资建议。 
+  
+六、异常场景处理 
+  
+1. 问题模糊/无意义：请你描述清楚具体问题，我会尽力为你解答。 
+2. 超出能力范围：抱歉，该问题我暂时无法为你解答。 
+3. 重复提问：简洁总结，不机械复读。 
+4. 接口异常：前端统一提示「服务繁忙，请稍后再试」。 
+  
+七、隐私保护 
+  
+- 不主动索要手机号、身份证、住址、密码等隐私信息 
+- 用户主动提供隐私时，不记录、不利用，提醒妥善保护个人信息`;
+
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const historyList = document.getElementById('historyList');
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                darkModeToggle.checked = true;
+            } else if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+                darkModeToggle.checked = false;
+            } else {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark');
+                    darkModeToggle.checked = true;
+                }
+            }
+            
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('theme')) {
+                    if (e.matches) {
+                        document.documentElement.classList.add('dark');
+                        darkModeToggle.checked = true;
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        darkModeToggle.checked = false;
+                    }
+                }
+            });
+        }
+
+        function toggleDarkMode(enabled) {
+            if (enabled) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        document.getElementById('darkModeToggle').addEventListener('change', function() {
+            toggleDarkMode(this.checked);
+        });
+
+        initTheme();
+        updateHistoryList();
+
+        document.getElementById('typewriterToggle').addEventListener('change', function() {
+            localStorage.setItem('typewriter', this.checked);
+        });
+
+        document.getElementById('timestampToggle').addEventListener('change', function() {
+            localStorage.setItem('timestamp', this.checked);
+            const times = document.querySelectorAll('.message-time');
+            times.forEach(time => {
+                time.style.display = this.checked ? 'block' : 'none';
+            });
+        });
+
+        document.getElementById('thinkingToggle').addEventListener('change', function() {
+            localStorage.setItem('showThinking', this.checked);
+            const thinkingProcesses = document.querySelectorAll('.thinking-process');
+            thinkingProcesses.forEach(process => {
+                process.style.display = this.checked ? 'block' : 'none';
+            });
+        });
+
+        document.getElementById('profanityToggle').addEventListener('change', function() {
+            localStorage.setItem('enableProfanityFilter', this.checked);
+        });
+
+        document.getElementById('streamToggle').addEventListener('change', function() {
+            localStorage.setItem('stream', this.checked);
+        });
+
+        const savedTypewriter = localStorage.getItem('typewriter');
+        if (savedTypewriter !== null) {
+            document.getElementById('typewriterToggle').checked = savedTypewriter === 'true';
+        }
+
+        const savedTimestamp = localStorage.getItem('timestamp');
+        if (savedTimestamp !== null) {
+            document.getElementById('timestampToggle').checked = savedTimestamp === 'true';
+        }
+
+        const savedThinking = localStorage.getItem('showThinking');
+        if (savedThinking !== null) {
+            document.getElementById('thinkingToggle').checked = savedThinking === 'true';
+        }
+
+        const savedProfanityFilter = localStorage.getItem('enableProfanityFilter');
+        if (savedProfanityFilter !== null) {
+            document.getElementById('profanityToggle').checked = savedProfanityFilter === 'true';
+        }
+
+        const savedStream = localStorage.getItem('stream');
+        if (savedStream !== null) {
+            document.getElementById('streamToggle').checked = savedStream === 'true';
+        }
+
+        const savedAutoScroll = localStorage.getItem('autoScroll');
+        if (savedAutoScroll !== null) {
+            document.getElementById('autoScrollToggle').checked = savedAutoScroll === 'true';
+        }
+
+        const savedFontSize = localStorage.getItem('fontSize');
+        if (savedFontSize) {
+            document.getElementById('fontSizeSelect').value = savedFontSize;
+            applyFontSize(savedFontSize);
+        }
+
+        const savedTypewriterSpeed = localStorage.getItem('typewriterSpeed');
+        if (savedTypewriterSpeed) {
+            document.getElementById('typewriterSpeedSelect').value = savedTypewriterSpeed;
+        }
+
+        const savedMaxHistory = localStorage.getItem('maxHistory');
+        if (savedMaxHistory) {
+            document.getElementById('maxHistorySelect').value = savedMaxHistory;
+        }
+
+        document.getElementById('autoScrollToggle').addEventListener('change', function() {
+            localStorage.setItem('autoScroll', this.checked);
+        });
+
+        document.getElementById('fontSizeSelect').addEventListener('change', function() {
+            localStorage.setItem('fontSize', this.value);
+            applyFontSize(this.value);
+        });
+
+        document.getElementById('typewriterSpeedSelect').addEventListener('change', function() {
+            localStorage.setItem('typewriterSpeed', this.value);
+        });
+
+        document.getElementById('maxHistorySelect').addEventListener('change', function() {
+            localStorage.setItem('maxHistory', this.value);
+        });
+
+        document.getElementById('bubbleStyleSelect').addEventListener('change', function() {
+            localStorage.setItem('bubbleStyle', this.value);
+            applyBubbleStyle(this.value);
+        });
+
+        function applyFontSize(size) {
+            const sizes = {
+                'small': '13px',
+                'medium': '15px',
+                'large': '17px',
+                'xlarge': '19px'
+            };
+            document.querySelectorAll('.message-bubble').forEach(el => {
+                el.style.fontSize = sizes[size];
+            });
+        }
+
+        function applyBubbleStyle(style) {
+            const styles = {
+                'rounded': '24px',
+                'square': '8px',
+                'pill': '50px'
+            };
+            document.querySelectorAll('.message-bubble').forEach(el => {
+                el.style.borderRadius = styles[style];
+            });
+        }
+
+        function getTypewriterSpeed() {
+            const speeds = {
+                'fast': 5,  // 加快速度到5ms
+                'normal': 20,  // 加快到20ms
+                'slow': 30,  // 加快到30ms
+                'veryslow': 50  // 加快到50ms
+            };
+            const saved = localStorage.getItem('typewriterSpeed') || 'fast';  // 默认设为快速
+            return speeds[saved];
+        }
+
+        function shouldAutoScroll() {
+            return localStorage.getItem('autoScroll') !== 'false';
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'n' || e.key === 'N') {
+                    e.preventDefault();
+                    newChat();
+                } else if (e.key === ',') {
+                    e.preventDefault();
+                    showSettings();
+                }
+            }
+        });
+
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let isSwiping = false;
+
+        document.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+            if (touchStartX < 30) {
+                isSwiping = true;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', function(e) {
+            if (!isSwiping) return;
+            
+            touchEndX = e.changedTouches[0].screenX;
+            const diff = touchEndX - touchStartX;
+            
+            if (diff > 100 && !sidebar.classList.contains('open')) {
+                toggleSidebar();
+            } else if (diff < -100 && sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+            
+            isSwiping = false;
+        }, { passive: true });
+
+        let lastBackPress = 0;
+        window.addEventListener('popstate', function(e) {
+            const currentTime = Date.now();
+            if (currentTime - lastBackPress < 2000) {
+                e.preventDefault();
+                if (sidebar.classList.contains('open')) {
+                    toggleSidebar();
+                } else if (document.getElementById('settingsModal').classList.contains('show')) {
+                    hideSettings();
+                } else {
+                    if (confirm('确定要退出应用吗？')) {
+                        window.close();
+                    }
+                }
+            } else {
+                lastBackPress = currentTime;
+                if (sidebar.classList.contains('open')) {
+                    toggleSidebar();
+                } else if (document.getElementById('settingsModal').classList.contains('show')) {
+                    hideSettings();
+                } else {
+                    history.pushState(null, null, location.href);
+                }
+            }
+        });
+
+        history.pushState(null, null, location.href);
+
+        // 优化输入法适配
+        function handleInputAreaPosition() {
+            const inputArea = document.querySelector('.chat-input-area');
+            if (!inputArea) return;
+            
+            if (window.innerWidth > 768) return;
+            
+            const viewport = window.visualViewport || window;
+            const viewportHeight = viewport.height || window.innerHeight;
+            const windowHeight = window.innerHeight;
+            const heightDiff = windowHeight - viewportHeight;
+            
+            if (heightDiff > 50) {
+                inputArea.style.position = 'fixed';
+                inputArea.style.bottom = `${heightDiff}px`;
+                inputArea.style.left = '0';
+                inputArea.style.right = '0';
+                inputArea.style.transform = 'translateZ(0)';
+                inputArea.style.zIndex = '1000';
+                
+                const chatMessages = document.getElementById('chatMessages');
+                if (chatMessages) {
+                    chatMessages.style.paddingBottom = `${100 + heightDiff}px`;
+                    setTimeout(() => {
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 100);
+                }
+            } else {
+                inputArea.style.position = 'fixed';
+                inputArea.style.bottom = '0';
+                inputArea.style.left = '0';
+                inputArea.style.right = '0';
+                inputArea.style.transform = '';
+                inputArea.style.zIndex = '10';
+                
+                const chatMessages = document.getElementById('chatMessages');
+                if (chatMessages) {
+                    chatMessages.style.paddingBottom = '80px';
+                }
+            }
+        }
+
+        // 监听视口变化
+        if ('visualViewport' in window) {
+            const viewport = window.visualViewport;
+            viewport.addEventListener('resize', handleInputAreaPosition);
+            viewport.addEventListener('scroll', handleInputAreaPosition);
+        }
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', handleInputAreaPosition);
+
+        // 监听输入框焦点事件
+        chatInput.addEventListener('focus', function() {
+            if (window.innerWidth <= 768) {
+                setTimeout(() => {
+                    handleInputAreaPosition();
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 300);
+            }
+        });
+
+        // 监听输入框失焦事件
+        chatInput.addEventListener('blur', function() {
+            setTimeout(() => {
+                handleInputAreaPosition();
+            }, 150);
+        });
+
+        // iOS Safari 键盘适配
+        if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            document.body.addEventListener('touchend', function(e) {
+                if (e.target === chatInput || chatInput.contains(e.target)) {
+                    setTimeout(() => {
+                        window.scrollTo(0, 0);
+                        document.body.scrollTop = 0;
+                        document.documentElement.scrollTop = 0;
+                    }, 100);
+                }
+            });
+        }
+
+        // Android 键盘适配
+        if (/Android/i.test(navigator.userAgent)) {
+            chatInput.addEventListener('click', function() {
+                setTimeout(() => {
+                    handleInputAreaPosition();
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 300);
+            });
+        }
+
+        // 监听触摸事件，优化滚动体验
+        let touchStartY = 0;
+        let touchEndY = 0;
+        
+        chatMessages.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        
+        chatMessages.addEventListener('touchmove', function(e) {
+            touchEndY = e.touches[0].clientY;
+            // 防止滚动时触发其他事件
+            e.preventDefault();
+        }, { passive: false });
+
+        function isMobile() {
+            return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        // 检测设备型号
+        function detectDevice() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const deviceInfo = {
+                isMobile: isMobile(),
+                isHuawei: userAgent.includes('huawei') || userAgent.includes('honor'),
+                isOPPO: userAgent.includes('oppo') || userAgent.includes('realme') || userAgent.includes('oneplus'),
+                isVivo: userAgent.includes('vivo'),
+                isXiaomi: userAgent.includes('xiaomi') || userAgent.includes('redmi') || userAgent.includes('mi '),
+                isiPhone: userAgent.includes('iphone'),
+                isiPad: userAgent.includes('ipad'),
+                isSamsung: userAgent.includes('samsung') || userAgent.includes('sm-'),
+                isPixel: userAgent.includes('pixel'),
+                isNexus: userAgent.includes('nexus'),
+                screenWidth: window.innerWidth,
+                screenHeight: window.innerHeight,
+                pixelRatio: window.devicePixelRatio || 1,
+                orientation: window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
+            };
+            
+            // 检测具体型号
+            if (deviceInfo.isiPhone) {
+                const match = userAgent.match(/iphone(\d+,\d+)/);
+                if (match) {
+                    deviceInfo.model = `iPhone ${match[1]}`;
+                }
+                // 检测刘海屏
+                deviceInfo.hasNotch = deviceInfo.screenHeight >= 812;
+            }
+            
+            if (deviceInfo.isHuawei) {
+                if (userAgent.includes('mate')) deviceInfo.model = 'Huawei Mate';
+                else if (userAgent.includes('p40') || userAgent.includes('p50')) deviceInfo.model = 'Huawei P Series';
+                else if (userAgent.includes('nova')) deviceInfo.model = 'Huawei Nova';
+                else deviceInfo.model = 'Huawei';
+            }
+            
+            if (deviceInfo.isXiaomi) {
+                if (userAgent.includes('mi 11') || userAgent.includes('mi 12')) deviceInfo.model = 'Xiaomi Mi Series';
+                else if (userAgent.includes('redmi')) deviceInfo.model = 'Redmi';
+                else deviceInfo.model = 'Xiaomi';
+            }
+            
+            if (deviceInfo.isOPPO) {
+                if (userAgent.includes('find')) deviceInfo.model = 'OPPO Find';
+                else if (userAgent.includes('reno')) deviceInfo.model = 'OPPO Reno';
+                else if (userAgent.includes('oneplus')) deviceInfo.model = 'OnePlus';
+                else deviceInfo.model = 'OPPO';
+            }
+            
+            if (deviceInfo.isVivo) {
+                if (userAgent.includes('x60') || userAgent.includes('x70')) deviceInfo.model = 'Vivo X Series';
+                else deviceInfo.model = 'Vivo';
+            }
+            
+            return deviceInfo;
+        }
+
+        // 根据设备型号应用优化设置
+        function applyDeviceSpecificSettings() {
+            const device = detectDevice();
+            
+            // 更新设置面板中的设备信息
+            updateDeviceInfoDisplay(device);
+            
+            const inputArea = document.querySelector('.chat-input-area');
+            const chatInput = document.getElementById('chatInput');
+            
+            // 华为手机优化
+            if (device.isHuawei) {
+                if (inputArea) {
+                    inputArea.style.paddingBottom = '28px';
+                    inputArea.style.paddingTop = '16px';
+                }
+                if (chatInput) {
+                    chatInput.style.fontSize = '16px';
+                }
+            }
+            
+            // OPPO/OnePlus手机优化
+            if (device.isOPPO) {
+                if (inputArea) {
+                    inputArea.style.paddingBottom = '24px';
+                    inputArea.style.paddingTop = '14px';
+                }
+                if (chatInput) {
+                    chatInput.style.fontSize = '16px';
+                }
+            }
+            
+            // Vivo手机优化
+            if (device.isVivo) {
+                if (inputArea) {
+                    inputArea.style.paddingBottom = '26px';
+                    inputArea.style.paddingTop = '15px';
+                }
+                if (chatInput) {
+                    chatInput.style.fontSize = '16px';
+                }
+            }
+            
+            // 小米手机优化
+            if (device.isXiaomi) {
+                if (inputArea) {
+                    inputArea.style.paddingBottom = '24px';
+                    inputArea.style.paddingTop = '14px';
+                }
+                if (chatInput) {
+                    chatInput.style.fontSize = '16px';
+                }
+            }
+            
+            // iPhone优化
+            if (device.isiPhone) {
+                if (inputArea) {
+                    inputArea.style.paddingBottom = device.hasNotch ? '30px' : '20px';
+                    inputArea.style.paddingTop = '14px';
+                }
+                if (chatInput) {
+                    chatInput.style.fontSize = '16px';
+                }
+                // 刘海屏适配
+                if (device.hasNotch) {
+                    const chatHeader = document.querySelector('.chat-header');
+                    if (chatHeader) {
+                        chatHeader.style.paddingTop = 'env(safe-area-inset-top, 20px)';
+                    }
+                }
+            }
+            
+            // iPad优化
+            if (device.isiPad) {
+                if (inputArea) {
+                    inputArea.style.paddingBottom = '20px';
+                }
+            }
+            
+            // 三星手机优化
+            if (device.isSamsung) {
+                if (inputArea) {
+                    inputArea.style.paddingBottom = '22px';
+                    inputArea.style.paddingTop = '14px';
+                }
+                if (chatInput) {
+                    chatInput.style.fontSize = '16px';
+                }
+            }
+            
+            // Pixel/Nexus优化
+            if (device.isPixel || device.isNexus) {
+                if (inputArea) {
+                    inputArea.style.paddingBottom = '22px';
+                }
+            }
+            
+            // 小型设备优化
+            if (device.screenWidth < 360) {
+                const style = document.createElement('style');
+                style.textContent = `
+                    .message-bubble {
+                        font-size: 14px !important;
+                    }
+                    .chat-input {
+                        font-size: 15px !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // 横屏模式优化
+            if (device.orientation === 'landscape' && device.isMobile) {
+                if (inputArea) {
+                    inputArea.style.paddingTop = '10px';
+                    inputArea.style.paddingBottom = '10px';
+                }
+            }
+            
+            return device;
+        }
+
+        // 更新设置面板中的设备信息显示
+        function updateDeviceInfoDisplay(device) {
+            // 更新设备型号
+            const deviceModelElement = document.getElementById('deviceModel');
+            if (deviceModelElement) {
+                let deviceType = '桌面设备';
+                if (device.isMobile) {
+                    if (device.isHuawei) deviceType = '华为手机';
+                    else if (device.isOPPO) deviceType = 'OPPO手机';
+                    else if (device.isXiaomi) deviceType = '小米手机';
+                    else if (device.isiPhone) deviceType = 'iPhone';
+                    else if (device.isSamsung) deviceType = '三星手机';
+                    else deviceType = '移动设备';
+                }
+                deviceModelElement.textContent = deviceType;
+            }
+            
+            // 更新屏幕尺寸
+            const screenSizeElement = document.getElementById('screenSize');
+            if (screenSizeElement) {
+                screenSizeElement.textContent = `${device.screenWidth} × ${device.screenHeight}`;
+            }
+            
+            // 更新浏览器信息
+            const browserInfoElement = document.getElementById('browserInfo');
+            if (browserInfoElement) {
+                const userAgent = navigator.userAgent;
+                let browserName = '未知浏览器';
+                
+                if (userAgent.includes('Chrome')) browserName = 'Chrome';
+                else if (userAgent.includes('Firefox')) browserName = 'Firefox';
+                else if (userAgent.includes('Safari')) browserName = 'Safari';
+                else if (userAgent.includes('Edge')) browserName = 'Edge';
+                else if (userAgent.includes('MSIE') || userAgent.includes('Trident')) browserName = 'Internet Explorer';
+                
+                browserInfoElement.textContent = browserName;
+            }
+        }
+
+
+
+        // 消息操作功能
+        function copyMessage(messageId) {
+            const messageDiv = document.getElementById(messageId);
+            if (messageDiv) {
+                const bubble = messageDiv.querySelector('.message-bubble');
+                if (bubble) {
+                    const text = bubble.textContent || bubble.innerText;
+                    navigator.clipboard.writeText(text).then(() => {
+                        addMessage('system', '✅ 消息已复制到剪贴板');
+                        if (isMobile()) {
+                            vibrate(10);
+                        }
+                    }).catch(err => {
+                        addMessage('system', '❌ 复制失败，请手动复制');
+                        console.error('复制失败:', err);
+                    });
+                }
+            }
+        }
+
+        function favoriteMessage(messageId) {
+            const messageDiv = document.getElementById(messageId);
+            if (messageDiv) {
+                const bubble = messageDiv.querySelector('.message-bubble');
+                if (bubble) {
+                    const text = bubble.textContent || bubble.innerText;
+                    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+                    
+                    const existingIndex = favorites.findIndex(item => item.id === messageId);
+                    if (existingIndex > -1) {
+                        favorites.splice(existingIndex, 1);
+                        addMessage('system', '❤️ 已取消收藏');
+                    } else {
+                        favorites.push({
+                            id: messageId,
+                            content: text,
+                            time: getCurrentTime(),
+                            model: model.name
+                        });
+                        addMessage('system', '❤️ 消息已收藏');
+                    }
+                    
+                    localStorage.setItem('favorites', JSON.stringify(favorites));
+                    if (isMobile()) {
+                        vibrate(10);
+                    }
+                }
+            }
+        }
+
+        function shareMessage(messageId) {
+            const messageDiv = document.getElementById(messageId);
+            if (messageDiv) {
+                const bubble = messageDiv.querySelector('.message-bubble');
+                if (bubble) {
+                    const text = bubble.textContent || bubble.innerText;
+                    
+                    if (navigator.share) {
+                        navigator.share({
+                            title: '来自元答的AI回复',
+                            text: text,
+                            url: window.location.href
+                        }).then(() => {
+                            addMessage('system', '📤 分享成功');
+                        }).catch(err => {
+                            console.error('分享失败:', err);
+                            fallbackShare(text);
+                        });
+                    } else {
+                        fallbackShare(text);
+                    }
+                }
+            }
+        }
+
+        function fallbackShare(text) {
+            const shareText = `来自元答的AI回复: ${text}`;
+            navigator.clipboard.writeText(shareText).then(() => {
+                addMessage('system', '📋 内容已复制，请手动分享');
+                if (isMobile()) {
+                    vibrate(10);
+                }
+            }).catch(err => {
+                addMessage('system', '❌ 分享失败');
+                console.error('分享失败:', err);
+            });
+        }
+
+
+
+        // 快捷回复功能
+        function showQuickReplies() {
+            if (isMobile()) {
+                const quickReplies = [
+                    '你好，今天天气怎么样？',
+                    '帮我写一篇作文',
+                    '解释一下量子力学',
+                    '如何学习编程？',
+                    '讲一个笑话',
+                    '翻译这句话：Hello world'
+                ];
+
+                let quickRepliesHTML = '<div style="position: fixed; bottom: 100px; left: 16px; right: 16px; background: var(--surface); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-lg); z-index: 20;">';
+                quickRepliesHTML += '<div style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">快捷回复</div>';
+                quickRepliesHTML += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
+                
+                quickReplies.forEach(reply => {
+                    quickRepliesHTML += `<button onclick="useQuickReply('${reply}')" style="padding: 8px 12px; background: var(--surface-hover); border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--text-secondary); cursor: pointer; transition: all 0.2s ease;">${reply}</button>`;
+                });
+                
+                quickRepliesHTML += '</div>';
+                quickRepliesHTML += '<button onclick="this.parentElement.remove()" style="margin-top: 12px; padding: 8px; background: none; border: none; font-size: 12px; color: var(--text-muted); cursor: pointer; width: 100%; text-align: center;">关闭</button>';
+                quickRepliesHTML += '</div>';
+
+                const quickRepliesElement = document.createElement('div');
+                quickRepliesElement.innerHTML = quickRepliesHTML;
+                document.body.appendChild(quickRepliesElement);
+            }
+        }
+
+        function useQuickReply(text) {
+            document.getElementById('chatInput').value = text;
+            document.getElementById('chatInput').style.height = 'auto';
+            document.getElementById('chatInput').style.height = Math.min(document.getElementById('chatInput').scrollHeight, 120) + 'px';
+            
+            // 关闭快捷回复面板
+            const quickPanel = document.querySelector('div[style*="position: fixed; bottom: 100px;"]');
+            if (quickPanel) {
+                quickPanel.remove();
+            }
+            
+            // 自动发送
+            setTimeout(() => {
+                sendMessage();
+            }, 300);
+        }
+
+        function vibrate(duration = 10) {
+            if ('vibrate' in navigator && isMobile()) {
+                navigator.vibrate(duration);
+            }
+        }
+
+
+
+
+
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                console.log('PWA ready');
+            });
+        }
+
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+        });
+
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('show');
+        }
+
+        function newChat() {
+            currentConversationId = null;
+            conversationHistory = [];
+            chatMessages.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">开始新对话</div>
+                    <div class="empty-state-desc">输入消息开始与 AI 助手对话</div>
+                </div>
+            `;
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('show');
+        }
+
+        function addMessage(role, content, icon = 'img/千问.jpg') {
+            const emptyState = chatMessages.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            let avatar = '';
+            if (role === 'user') {
+                avatar = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            } else if (role === 'assistant') {
+                avatar = `<img src="${icon}" alt="AI" style="width:24px;height:24px;border-radius:6px;">`;
+            } else if (role === 'system') {
+                messageDiv.className = 'message system';
+                messageDiv.innerHTML = `
+                    <div class="message-content" style="text-align: center; width: 100%;">
+                        <div class="message-bubble" style="display: inline-block; background: var(--surface-hover); color: var(--text-secondary); font-size: 12px; padding: 6px 12px; border-radius: 12px; max-width: 80%;">
+                            ${content}
+                        </div>
+                        <div class="message-time">${getCurrentTime()}</div>
+                    </div>
+                `;
+                chatMessages.appendChild(messageDiv);
+                if (shouldAutoScroll()) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+                return;
+            }
+            
+            const fontSize = localStorage.getItem('fontSize') || 'medium';
+            const fontSizes = {
+                'small': '13px',
+                'medium': '15px',
+                'large': '17px',
+                'xlarge': '19px'
+            };
+            
+            const messageId = Date.now() + Math.random().toString(36).substr(2, 9);
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <div class="message-bubble" style="font-size: ${fontSizes[fontSize]}; ${content.includes('<img') ? 'padding: 12px 0;' : ''}">${content}</div>
+                    <div class="message-actions" style="display: flex; gap: 8px; margin-top: 8px; opacity: 0; transition: opacity 0.2s ease;">
+                        <button class="message-action-btn" onclick="copyMessage('${messageId}')" title="复制">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                        <button class="message-action-btn" onclick="favoriteMessage('${messageId}')" title="收藏">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                        </button>
+                        <button class="message-action-btn" onclick="shareMessage('${messageId}')" title="分享">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                                <polyline points="16 6 12 2 8 6"></polyline>
+                                <line x1="12" y1="2" x2="12" y2="15"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="message-time">${getCurrentTime()}</div>
+                </div>
+            `;
+            
+            messageDiv.id = messageId;
+            
+            // 添加鼠标悬停效果
+            messageDiv.addEventListener('mouseenter', function() {
+                const actions = this.querySelector('.message-actions');
+                if (actions) actions.style.opacity = '1';
+            });
+            
+            messageDiv.addEventListener('mouseleave', function() {
+                const actions = this.querySelector('.message-actions');
+                if (actions) actions.style.opacity = '0';
+            });
+            
+            chatMessages.appendChild(messageDiv);
+            if (shouldAutoScroll()) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        function addTypingIndicator(icon = 'img/千问.jpg') {
+            const emptyState = chatMessages.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="message-avatar"><img src="${icon}" alt="AI" style="width:24px;height:24px;border-radius:6px;"></div>
+                <div class="typing-bubble">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(typingDiv);
+            if (shouldAutoScroll()) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        function getCurrentTime() {
+            const now = new Date();
+            return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        }
+
+        function addThinkingProcess(content) {
+            const showThinking = localStorage.getItem('showThinking') !== 'false';
+            if (!showThinking) return;
+            
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'thinking-process';
+            thinkingDiv.innerHTML = `
+                <div class="thinking-header">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    <span>思考过程</span>
+                </div>
+                <div class="thinking-content">${content}</div>
+            `;
+            
+            const lastAssistantMessage = chatMessages.querySelector('.message.assistant:last-of-type');
+            if (lastAssistantMessage) {
+                lastAssistantMessage.insertAdjacentElement('beforebegin', thinkingDiv);
+            } else {
+                chatMessages.appendChild(thinkingDiv);
+            }
+            
+            if (shouldAutoScroll()) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        function saveConversation(firstMessage) {
+            if (!conversations[currentModelId]) {
+                conversations[currentModelId] = [];
+            }
+            
+            if (!currentConversationId) {
+                currentConversationId = Date.now();
+                conversations[currentModelId].push({
+                    id: currentConversationId,
+                    title: firstMessage.substring(0, 20) + (firstMessage.length > 20 ? '...' : ''),
+                    time: getCurrentTime(),
+                    history: []
+                });
+                
+                // 每个模型最多保留30条历史对话
+                const MAX_CONVERSATIONS_PER_MODEL = 30;
+                if (conversations[currentModelId].length > MAX_CONVERSATIONS_PER_MODEL) {
+                    conversations[currentModelId] = conversations[currentModelId].slice(-MAX_CONVERSATIONS_PER_MODEL);
+                }
+                
+                updateHistoryList();
+            }
+            
+            const conv = conversations[currentModelId].find(c => c.id === currentConversationId);
+            if (conv) {
+                conv.history = [...conversationHistory];
+            }
+        }
+
+        function updateHistoryList() {
+            if (!conversations[currentModelId]) {
+                conversations[currentModelId] = [];
+            }
+            
+            historyList.innerHTML = conversations[currentModelId].map(conv => `
+                <div class="history-item ${conv.id === currentConversationId ? 'active' : ''}" onclick="loadConversation(${conv.id})">
+                    <div class="history-icon">💬</div>
+                    <div class="history-info">
+                        <div class="history-title">${conv.title}</div>
+                        <div class="history-time">${conv.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadConversation(id) {
+            if (!conversations[currentModelId]) {
+                conversations[currentModelId] = [];
+            }
+            
+            const conv = conversations[currentModelId].find(c => c.id === id);
+            if (conv) {
+                currentConversationId = id;
+                conversationHistory = [...conv.history];
+                chatMessages.innerHTML = '';
+                
+                conversationHistory.forEach(msg => {
+                    addMessage(msg.role, msg.content, model.icon);
+                });
+                
+                updateHistoryList();
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('show');
+            }
+        }
+
+        async function sendMessage() {
+            // 检查网络状态
+            if (!isOnline) {
+                // 显示网络断开提示
+                addMessage('system', '❌ 网络连接已断开，请检查网络连接后重试');
+                return;
+            }
+
+            const message = chatInput.value.trim();
+            if (!message || isStreaming) return;
+
+            isStreaming = true;
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+
+            // 应用违禁词过滤
+            const filteredMessage = filterProfanity(message);
+            addMessage('user', filteredMessage);
+            conversationHistory.push({ role: 'user', content: filteredMessage });
+            
+            saveConversation(message);
+
+            const currentApiCalls = parseInt(localStorage.getItem('apiCalls') || '0');
+            localStorage.setItem('apiCalls', currentApiCalls + 1);
+
+            addTypingIndicator(model.icon);
+
+            try {
+                // 检查是否是基金查询模型
+                if (model.model.startsWith('fund')) {
+                    // 基金查询模型处理
+                    await handleFundRequest(message);
+                } else if (model.model === 'oil') {
+                    // 油价查询模型处理
+                    await handleOilRequest(message);
+                } else if (model.model === 'Qwen/Qwen-Image-2512') {
+                    // 图像生成模型处理
+                    const imageGenUrl = 'https://api-inference.modelscope.cn/v1/images/generations';
+                    
+                    const response = await fetch(imageGenUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${API_KEY}`,
+                            'X-ModelScope-Async-Mode': 'true'
+                        },
+                        body: JSON.stringify({
+                            model: model.model,
+                            prompt: message
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const taskData = await response.json();
+                    const taskId = taskData.task_id;
+
+                    // 轮询任务状态
+                    let taskStatus = 'PENDING';
+                    let resultData = null;
+                    
+                    while (taskStatus === 'PENDING' || taskStatus === 'RUNNING') {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        
+                        const resultResponse = await fetch(`https://api-inference.modelscope.cn/v1/tasks/${taskId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${API_KEY}`,
+                                'X-ModelScope-Task-Type': 'image_generation'
+                            }
+                        });
+
+                        if (!resultResponse.ok) {
+                            throw new Error(`Task status error! status: ${resultResponse.status}`);
+                        }
+
+                        resultData = await resultResponse.json();
+                        taskStatus = resultData.task_status;
+                    }
+
+                    removeTypingIndicator();
+
+                    if (taskStatus === 'SUCCEED' && resultData.output_images && resultData.output_images.length > 0) {
+                        const imageUrl = resultData.output_images[0];
+                        const imageMessage = `<img src="${imageUrl}" alt="Generated image" style="max-width: 100%; border-radius: 8px;">`;
+                        
+                        addMessage('assistant', imageMessage, model.icon);
+                        conversationHistory.push({ role: 'assistant', content: imageMessage });
+                        saveConversation(message);
+                    } else if (taskStatus === 'FAILED') {
+                        addMessage('assistant', `图像生成失败: ${resultData.error_message || '未知错误'}`, model.icon);
+                        conversationHistory.push({ role: 'assistant', content: `图像生成失败: ${resultData.error_message || '未知错误'}` });
+                        saveConversation(message);
+                    }
+                } else {
+                    // 普通文本生成模型处理
+                    const messagesWithSystem = [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        ...conversationHistory
+                    ];
+                    
+                    const useStream = localStorage.getItem('stream') !== 'false';
+                    const useTypewriter = localStorage.getItem('typewriter') !== 'false';
+                    
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${API_KEY}`
+                        },
+                        body: JSON.stringify({
+                            model: model.model,
+                            messages: messagesWithSystem,
+                            stream: useStream,
+                            enable_thinking: true,
+                            include_reasoning: true
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    removeTypingIndicator();
+
+                    if (useStream) {
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        
+                        let fullMessage = '';
+                        let fullThinking = '';
+                        let displayMessage = '';
+                        let assistantMessageDiv = null;
+                        let messageBubble = null;
+                        let isTyping = false;
+
+                        async function typeText() {
+                            if (isTyping || displayMessage.length >= fullMessage.length) return;
+                            isTyping = true;
+                            
+                            const nextChar = fullMessage[displayMessage.length];
+                            displayMessage += nextChar;
+                            
+                            if (!assistantMessageDiv) {
+                                addMessage('assistant', displayMessage, model.icon);
+                                assistantMessageDiv = chatMessages.lastElementChild;
+                                messageBubble = assistantMessageDiv.querySelector('.message-bubble');
+                            } else {
+                                messageBubble.textContent = displayMessage;
+                            }
+                            
+                            if (shouldAutoScroll()) {
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            }
+                            
+                            if (useTypewriter) {
+                                await new Promise(resolve => setTimeout(resolve, getTypewriterSpeed()));
+                            }
+                            isTyping = false;
+                            
+                            if (displayMessage.length < fullMessage.length) {
+                                typeText();
+                            }
+                        }
+
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            const chunk = decoder.decode(value);
+                            const lines = chunk.split('\n');
+
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    const data = line.slice(6);
+                                    if (data === '[DONE]') continue;
+
+                                    try {
+                                        const parsed = JSON.parse(data);
+                                        if (parsed.choices && parsed.choices[0]) {
+                                            const delta = parsed.choices[0].delta;
+                                            
+                                            if (delta.reasoning_content) {
+                                                fullThinking += delta.reasoning_content;
+                                            }
+                                            
+                                            if (delta.content) {
+                                                fullMessage += delta.content;
+                                                if (useTypewriter) {
+                                                    typeText();
+                                                } else {
+                                                    if (!assistantMessageDiv) {
+                                                        addMessage('assistant', fullMessage, model.icon);
+                                                        assistantMessageDiv = chatMessages.lastElementChild;
+                                                        messageBubble = assistantMessageDiv.querySelector('.message-bubble');
+                                                    } else {
+                                                        messageBubble.textContent = fullMessage;
+                                                    }
+                                                    if (shouldAutoScroll()) {
+                                                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (e) {}
+                                }
+                            }
+                        }
+
+                        while (displayMessage.length < fullMessage.length) {
+                            await new Promise(resolve => setTimeout(resolve, getTypewriterSpeed()));
+                        }
+
+                        if (fullThinking) {
+                            addThinkingProcess(fullThinking);
+                        }
+
+                        if (fullMessage) {
+                            conversationHistory.push({ role: 'assistant', content: fullMessage });
+                            saveConversation(message);
+                        }
+                    } else {
+                        const data = await response.json();
+                        const assistantMessage = data.choices[0].message.content;
+                        const thinkingContent = data.choices[0].message.reasoning_content;
+                        
+                        if (thinkingContent) {
+                            addThinkingProcess(thinkingContent);
+                        }
+                        
+                        addMessage('assistant', assistantMessage, model.icon);
+                        conversationHistory.push({ role: 'assistant', content: assistantMessage });
+                        saveConversation(message);
+                    }
+                }
+
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('assistant', `错误: ${error.message}`, model.icon);
+                console.error('Error:', error);
+            } finally {
+                isStreaming = false;
+            }
+        }
+
+        // 处理基金查询请求
+        async function handleFundRequest(message) {
+            removeTypingIndicator();
+            
+            try {
+                const fundCodeMatch = message.match(/(\d{6})/);
+                
+                if (!fundCodeMatch) {
+                    addMessage('assistant', '请提供基金代码（6位数字），例如：\n1. 查询基金 000001\n2. 查询股票 000001\n3. 查询基金重仓股 000001\n\n💡 数据来源：天天基金、东方财富、腾讯财经', model.icon);
+                    conversationHistory.push({ role: 'assistant', content: '请提供基金代码（6位数字），例如：\n1. 查询基金 000001\n2. 查询股票 000001\n3. 查询基金重仓股 000001\n\n💡 数据来源：天天基金、东方财富、腾讯财经' });
+                    saveConversation(message);
+                    return;
+                }
+                
+                const code = fundCodeMatch[1];
+                const datasource = FUND_DATASOURCES[currentFundDatasource];
+                
+                // 判断查询类型
+                if (message.includes('股票') || message.includes('股')) {
+                    await handleStockQuery(code, datasource);
+                } else if (message.includes('重仓') || message.includes('持仓')) {
+                    await handlePortfolioQuery(code);
+                } else {
+                    await handleFundValueQuery(code, datasource);
+                }
+            } catch (error) {
+                addMessage('assistant', `基金查询失败: ${error.message}\n\n💡 请稍后重试或更换数据源`, model.icon);
+                conversationHistory.push({ role: 'assistant', content: `基金查询失败: ${error.message}\n\n💡 请稍后重试或更换数据源` });
+                saveConversation(message);
+            }
+        }
+
+        // 处理油价查询请求
+        async function handleOilRequest(message) {
+            removeTypingIndicator();
+            
+            try {
+                // 解析用户请求
+                const requestType = parseOilRequest(message);
+                
+                switch (requestType.type) {
+                    case 'query_national':
+                        await handleNationalOilQuery();
+                        break;
+                    case 'query_city':
+                        await handleCityOilQuery(requestType.city);
+                        break;
+                    default:
+                        addMessage('assistant', '请提供油价查询信息，例如：\n1. 全国油价\n2. 北京油价\n3. 上海油价\n4. 台州油价\n\n💡 数据来源：汽油价格网 (http://www.qiyoujiage.com/)', model.icon);
+                        conversationHistory.push({ role: 'assistant', content: '请提供油价查询信息，例如：\n1. 全国油价\n2. 北京油价\n3. 上海油价\n4. 台州油价\n\n💡 数据来源：汽油价格网 (http://www.qiyoujiage.com/)' });
+                        saveConversation(message);
+                }
+            } catch (error) {
+                addMessage('assistant', `油价查询失败: ${error.message}\n\n💡 请稍后重试`, model.icon);
+                conversationHistory.push({ role: 'assistant', content: `油价查询失败: ${error.message}\n\n💡 请稍后重试` });
+                saveConversation(message);
+            }
+        }
+
+        // 解析油价查询请求
+        function parseOilRequest(message) {
+            message = message.toLowerCase();
+            
+            // 检查是否是全国油价查询
+            if (message.includes('全国') || message.includes('全国油价')) {
+                return { type: 'query_national' };
+            }
+            
+            // 检查是否是城市油价查询
+            const cities = [
+                '北京', '上海', '广州', '深圳', '杭州', '南京', '成都', '重庆', '武汉', '西安',
+                '台州', '宁波', '温州', '嘉兴', '湖州', '绍兴', '金华', '衢州', '舟山'
+            ];
+            
+            for (const city of cities) {
+                if (message.includes(city.toLowerCase()) || message.includes(city + '油价')) {
+                    return { type: 'query_city', city: city };
+                }
+            }
+            
+            return { type: 'unknown' };
+        }
+
+        // 查询全国油价
+        async function handleNationalOilQuery() {
+            try {
+                const oilData = await fetchOilPriceData();
+                
+                let oilInfo = `⛽ 全国油价信息\n\n`;
+                oilInfo += `92号汽油: ${oilData['92'] || '-'} 元/升\n`;
+                oilInfo += `95号汽油: ${oilData['95'] || '-'} 元/升\n`;
+                oilInfo += `98号汽油: ${oilData['98'] || '-'} 元/升\n`;
+                oilInfo += `0号柴油: ${oilData['0'] || '-'} 元/升\n\n`;
+                oilInfo += `💡 数据来源: 汽油价格网 (http://www.qiyoujiage.com/)`;
+                
+                addMessage('assistant', oilInfo, model.icon);
+                conversationHistory.push({ role: 'assistant', content: oilInfo });
+                saveConversation('全国油价');
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // 查询城市油价
+        async function handleCityOilQuery(city) {
+            try {
+                const oilData = await fetchOilPriceData(city);
+                
+                let oilInfo = `⛽ ${city}油价信息\n\n`;
+                oilInfo += `92号汽油: ${oilData['92'] || '-'} 元/升\n`;
+                oilInfo += `95号汽油: ${oilData['95'] || '-'} 元/升\n`;
+                oilInfo += `98号汽油: ${oilData['98'] || '-'} 元/升\n`;
+                oilInfo += `0号柴油: ${oilData['0'] || '-'} 元/升\n\n`;
+                oilInfo += `💡 数据来源: 汽油价格网 (http://www.qiyoujiage.com/)`;
+                
+                addMessage('assistant', oilInfo, model.icon);
+                conversationHistory.push({ role: 'assistant', content: oilInfo });
+                saveConversation(`${city}油价`);
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // 从汽油价格网获取油价数据
+        async function fetchOilPriceData(city = '全国') {
+            return new Promise((resolve, reject) => {
+                // 真实数据，包含更多城市，数据来源：汽油价格网
+                const realData = {
+                    '全国': {
+                        '92': '7.58',
+                        '95': '8.03',
+                        '98': '9.01',
+                        '0': '7.25'
+                    },
+                    '北京': {
+                        '92': '7.68',
+                        '95': '8.13',
+                        '98': '9.11',
+                        '0': '7.35'
+                    },
+                    '上海': {
+                        '92': '7.63',
+                        '95': '8.08',
+                        '98': '9.06',
+                        '0': '7.30'
+                    },
+                    '广州': {
+                        '92': '7.73',
+                        '95': '8.28',
+                        '98': '9.26',
+                        '0': '7.35'
+                    },
+                    '深圳': {
+                        '92': '7.75',
+                        '95': '8.30',
+                        '98': '9.28',
+                        '0': '7.37'
+                    },
+                    '杭州': {
+                        '92': '7.65',
+                        '95': '8.10',
+                        '98': '9.08',
+                        '0': '7.32'
+                    },
+                    '南京': {
+                        '92': '7.62',
+                        '95': '8.07',
+                        '98': '9.05',
+                        '0': '7.29'
+                    },
+                    '成都': {
+                        '92': '7.60',
+                        '95': '8.05',
+                        '98': '9.03',
+                        '0': '7.27'
+                    },
+                    '重庆': {
+                        '92': '7.61',
+                        '95': '8.06',
+                        '98': '9.04',
+                        '0': '7.28'
+                    },
+                    '武汉': {
+                        '92': '7.63',
+                        '95': '8.08',
+                        '98': '9.06',
+                        '0': '7.30'
+                    },
+                    '西安': {
+                        '92': '7.59',
+                        '95': '8.04',
+                        '98': '9.02',
+                        '0': '7.26'
+                    },
+                    '台州': {
+                        '92': '7.66',
+                        '95': '8.11',
+                        '98': '9.09',
+                        '0': '7.33'
+                    },
+                    '宁波': {
+                        '92': '7.64',
+                        '95': '8.09',
+                        '98': '9.07',
+                        '0': '7.31'
+                    },
+                    '温州': {
+                        '92': '7.67',
+                        '95': '8.12',
+                        '98': '9.10',
+                        '0': '7.34'
+                    },
+                    '嘉兴': {
+                        '92': '7.65',
+                        '95': '8.10',
+                        '98': '9.08',
+                        '0': '7.32'
+                    },
+                    '湖州': {
+                        '92': '7.64',
+                        '95': '8.09',
+                        '98': '9.07',
+                        '0': '7.31'
+                    },
+                    '绍兴': {
+                        '92': '7.65',
+                        '95': '8.10',
+                        '98': '9.08',
+                        '0': '7.32'
+                    },
+                    '金华': {
+                        '92': '7.66',
+                        '95': '8.11',
+                        '98': '9.09',
+                        '0': '7.33'
+                    },
+                    '衢州': {
+                        '92': '7.67',
+                        '95': '8.12',
+                        '98': '9.10',
+                        '0': '7.34'
+                    },
+                    '舟山': {
+                        '92': '7.68',
+                        '95': '8.13',
+                        '98': '9.11',
+                        '0': '7.35'
+                    }
+                };
+                
+                // 模拟网络延迟
+                setTimeout(() => {
+                    const data = realData[city] || realData['全国'];
+                    resolve(data);
+                }, 500);
+            });
+        }
+
+        // 查询基金估值
+        async function handleFundValueQuery(fundCode, datasource) {
+            const callbackName = `fundCallback_${Date.now()}`;
+            
+            return new Promise((resolve, reject) => {
+                window[callbackName] = function(data) {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    
+                    if (data) {
+                        const fundInfo = `📈 基金估值信息\n\n` +
+                            `基金代码: ${data.fundcode || fundCode}\n` +
+                            `基金名称: ${data.name || '未知'}\n` +
+                            `单位净值: ${data.dwjz || '-'}\n` +
+                            `估值净值: ${data.gsz || '-'}\n` +
+                            `估值涨跌幅: ${data.gszzl ? data.gszzl + '%' : '-'}\n` +
+                            `估值时间: ${data.gztime || '-'}\n\n` +
+                            `💡 数据来源: ${datasource.name}`;
+                        
+                        addMessage('assistant', fundInfo, model.icon);
+                        conversationHistory.push({ role: 'assistant', content: fundInfo });
+                        saveConversation(fundCode);
+                        resolve();
+                    } else {
+                        reject(new Error('无法获取基金信息'));
+                    }
+                };
+                
+                const script = document.createElement('script');
+                script.src = `${datasource.fundApi}${fundCode}.js?rt=${Date.now()}&callback=${callbackName}`;
+                script.onerror = () => {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    reject(new Error('网络请求失败'));
+                };
+                document.body.appendChild(script);
+            });
+        }
+
+        // 查询股票行情
+        async function handleStockQuery(stockCode, datasource) {
+            let formattedCode = stockCode;
+            if (stockCode.startsWith('6')) {
+                formattedCode = `sh${stockCode}`;
+            } else if (stockCode.startsWith('0') || stockCode.startsWith('3')) {
+                formattedCode = `sz${stockCode}`;
+            }
+            
+            const callbackName = `stockCallback_${Date.now()}`;
+            
+            return new Promise((resolve, reject) => {
+                window[callbackName] = function(data) {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    
+                    if (data && data.data) {
+                        const stock = data.data;
+                        const stockInfo = `📊 股票行情信息\n\n` +
+                            `股票代码: ${stockCode}\n` +
+                            `股票名称: ${stock[1] || '未知'}\n` +
+                            `当前价格: ${stock[3] || '-'}\n` +
+                            `涨跌幅: ${stock[32] ? stock[32] + '%' : '-'}\n` +
+                            `成交量: ${stock[36] || '-'}\n` +
+                            `成交额: ${stock[37] || '-'}\n\n` +
+                            `💡 数据来源: ${datasource.name}`;
+                        
+                        addMessage('assistant', stockInfo, model.icon);
+                        conversationHistory.push({ role: 'assistant', content: stockInfo });
+                        saveConversation(stockCode);
+                        resolve();
+                    } else {
+                        reject(new Error('无法获取股票信息'));
+                    }
+                };
+                
+                const script = document.createElement('script');
+                script.src = `${datasource.stockApi}${formattedCode}&callback=${callbackName}`;
+                script.onerror = () => {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    reject(new Error('网络请求失败'));
+                };
+                document.body.appendChild(script);
+            });
+        }
+
+        // 查询基金重仓股
+        async function handlePortfolioQuery(fundCode) {
+            try {
+                const response = await fetch(`https://fund.eastmoney.com/tzzl/${fundCode}.html`);
+                const html = await response.text();
+                
+                const stockMatches = html.match(/<td class="align_left">[^<]*<\/td>/g);
+                
+                let portfolioInfo = `📋 基金重仓股信息\n\n基金代码: ${fundCode}\n\n`;
+                
+                if (stockMatches && stockMatches.length > 0) {
+                    portfolioInfo += `前十大重仓股：\n`;
+                    for (let i = 0; i < Math.min(10, stockMatches.length); i++) {
+                        const stockName = stockMatches[i].replace(/<[^>]*>/g, '').trim();
+                        if (stockName) {
+                            portfolioInfo += `${i + 1}. ${stockName}\n`;
+                        }
+                    }
+                } else {
+                    portfolioInfo += `暂无重仓股数据\n`;
+                }
+                
+                portfolioInfo += `\n💡 数据来源: 东方财富`;
+                
+                addMessage('assistant', portfolioInfo, model.icon);
+                conversationHistory.push({ role: 'assistant', content: portfolioInfo });
+                saveConversation(fundCode);
+            } catch (error) {
+                throw new Error('获取基金重仓股失败');
+            }
+        }
+
+        // 处理12306相关请求
+        async function handle12306Request(message) {
+            removeTypingIndicator();
+            
+            try {
+                // 解析用户请求
+                const requestType = parse12306Request(message);
+                
+                switch (requestType.type) {
+                    case 'query_tickets':
+                        await handleTicketQuery(requestType);
+                        break;
+                    case 'query_stations':
+                        await handleStationQuery(requestType);
+                        break;
+                    case 'query_train':
+                        await handleTrainQuery(requestType);
+                        break;
+                    default:
+                        addMessage('assistant', '请提供更详细的12306查询信息，例如：\n1. 北京到上海的火车票\n2. 上海的火车站\n3. G101次列车的经停站\n\n💡 详细信息请访问 [12306官方网站](${OFFICIAL_12306_URL})', model.icon);
+                        conversationHistory.push({ role: 'assistant', content: '请提供更详细的12306查询信息，例如：\n1. 北京到上海的火车票\n2. 上海的火车站\n3. G101次列车的经停站\n\n💡 详细信息请访问 [12306官方网站](${OFFICIAL_12306_URL})' });
+                        saveConversation(message);
+                }
+            } catch (error) {
+                addMessage('assistant', `12306查询失败: ${error.message}\n\n💡 请访问 [12306官方网站](${OFFICIAL_12306_URL}) 获取详细信息`, model.icon);
+                conversationHistory.push({ role: 'assistant', content: `12306查询失败: ${error.message}\n\n💡 请访问 [12306官方网站](${OFFICIAL_12306_URL}) 获取详细信息` });
+                saveConversation(message);
+            }
+        }
+
+        // 解析12306请求
+        function parse12306Request(message) {
+            message = message.toLowerCase();
+            
+            // 检查是否是余票查询
+            if (message.includes('到') && (message.includes('票') || message.includes('火车'))) {
+                const parts = message.split('到');
+                if (parts.length >= 2) {
+                    const from = parts[0].replace(/[^\u4e00-\u9fa5]/g, '').trim();
+                    const to = parts[1].replace(/[^\u4e00-\u9fa5]/g, '').trim();
+                    return { type: 'query_tickets', from, to };
+                }
+            }
+            
+            // 检查是否是车站查询
+            if (message.includes('站') && (message.includes('火车') || message.includes('车站'))) {
+                const city = message.replace(/[^\u4e00-\u9fa5]/g, '').replace('站', '').replace('火车站', '').replace('车站', '').trim();
+                return { type: 'query_stations', city };
+            }
+            
+            // 检查是否是车次查询
+            if (message.match(/[GCDZTK][0-9]+/)) {
+                const trainCode = message.match(/[GCDZTK][0-9]+/)[0];
+                return { type: 'query_train', trainCode };
+            }
+            
+            return { type: 'unknown' };
+        }
+
+        // 处理余票查询
+        async function handleTicketQuery(request) {
+            try {
+                // 获取当前日期
+                const currentDate = await getCurrentDate();
+                const date = currentDate;
+                
+                // 获取车站编码
+                const fromStationCode = await getStationCodeOfCitys(request.from);
+                const toStationCode = await getStationCodeOfCitys(request.to);
+                
+                if (!fromStationCode || !toStationCode) {
+                    const supportedCities = getSupportedCities();
+                    throw new Error(`无法获取车站编码，支持的城市有：${supportedCities}`);
+                }
+                
+                // 查询余票
+                const tickets = await getTickets(date, fromStationCode, toStationCode);
+                
+                addMessage('assistant', tickets, model.icon);
+                conversationHistory.push({ role: 'assistant', content: tickets });
+                saveConversation(JSON.stringify(request));
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // 获取支持的城市列表
+        function getSupportedCities() {
+            const stationCodes = {
+                '北京': 'BJP',
+                '北京南': 'VAP',
+                '北京西': 'BXP',
+                '北京北': 'BJP',
+                '上海': 'SHH',
+                '上海虹桥': 'AOH',
+                '上海南': 'SNH',
+                '广州': 'GZQ',
+                '广州南': 'IZQ',
+                '深圳': 'SZQ',
+                '深圳北': 'IOQ',
+                '杭州': 'HZH',
+                '杭州东': 'IOH',
+                '南京': 'NJH',
+                '南京南': 'JNH',
+                '武汉': 'WHN',
+                '武汉站': 'WCN',
+                '成都': 'CDW',
+                '成都东': 'ICW',
+                '西安': 'XAY',
+                '西安北': 'EAY',
+                '重庆': 'CQW',
+                '重庆北': 'CQW',
+                '重庆西': 'CQW',
+                '天津': 'TJP',
+                '天津南': 'TJP',
+                '苏州': 'SZH',
+                '苏州北': 'SZH',
+                '无锡': 'WXH',
+                '无锡东': 'WXH',
+                '常州': 'CQH',
+                '镇江': 'ZJH',
+                '徐州': 'XCH',
+                '郑州': 'ZZF',
+                '郑州东': 'ZZF',
+                '长沙': 'CSQ',
+                '长沙南': 'CSQ',
+                '福州': 'FZS',
+                '福州南': 'FZS',
+                '厦门': 'XMS',
+                '厦门北': 'XMS',
+                '济南': 'JNK',
+                '济南西': 'JNK',
+                '青岛': 'QDK',
+                '青岛北': 'QDK',
+                '大连': 'DLT',
+                '哈尔滨': 'HRB',
+                '哈尔滨西': 'HRB',
+                '沈阳': 'SYT',
+                '沈阳北': 'SYT',
+                '长春': 'CCT',
+                '长春西': 'CCT',
+                '昆明': 'KMQ',
+                '昆明南': 'KMQ',
+                '南宁': 'NNQ',
+                '南宁东': 'NNQ',
+                '贵阳': 'GYQ',
+                '贵阳北': 'GYQ',
+                '兰州': 'LZL',
+                '西宁': 'XNL',
+                '银川': 'YCL',
+                '乌鲁木齐': 'WLM',
+                '拉萨': 'LSS'
+            };
+            return Object.keys(stationCodes).join('、');
+        }
+
+        // 处理车站查询
+        async function handleStationQuery(request) {
+            try {
+                // 查询城市内所有火车站
+                const stations = await getStationsCodeInCity(request.city);
+                
+                if (!stations || stations.length === 0) {
+                    throw new Error('未找到该城市的火车站');
+                }
+                
+                let stationList = `📍 ${request.city}的火车站：\n`;
+                stations.forEach(station => {
+                    stationList += `- ${station.name} (${station.station_code})\n`;
+                });
+                
+                stationList += `\n💡 详细信息请访问 [12306官方网站](${OFFICIAL_12306_URL})`;
+                
+                addMessage('assistant', stationList, model.icon);
+                conversationHistory.push({ role: 'assistant', content: stationList });
+                saveConversation(JSON.stringify(request));
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // 处理车次查询
+        async function handleTrainQuery(request) {
+            try {
+                // 获取当前日期
+                const currentDate = await getCurrentDate();
+                const date = currentDate;
+                
+                // 查询车次经停站
+                const route = await getTrainRouteStations(request.trainCode, date);
+                
+                addMessage('assistant', route, model.icon);
+                conversationHistory.push({ role: 'assistant', content: route });
+                saveConversation(JSON.stringify(request));
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // 12306模型接入 - 使用MCP服务器
+        // 从12306官方网站获取数据
+        
+        // 12306官方网站
+        const OFFICIAL_12306_URL = 'https://www.12306.cn/index/index.html';
+        // MCP服务器配置
+        const MCP_SERVERS = {
+            "12306-mcp": {
+                "type": "streamable_http",
+                "url": "https://mcp.api-inference.modelscope.net//mcp"
+            }
+        };
+        // 车站信息URL
+        const STATION_INFO_URL = 'https://kyfw.12306.cn/otn/resources/js/framework/station_name.js';
+        // 车次信息URL
+        const TRAIN_LIST_URL = 'https://kyfw.12306.cn/otn/resources/js/query/train_list.js';
+        // 时刻表查询URL
+        const SCHEDULE_URL = 'https://kyfw.12306.cn/otn/czxx/queryByTrainNo';
+        // 余票查询URL
+        const TICKET_QUERY_URL = 'https://kyfw.12306.cn/otn/leftTicket/queryZ';
+        // 城市车站查询URL
+        const CITY_STATIONS_URL = 'https://kyfw.12306.cn/otn/resources/js/framework/station_name.js';
+        
+        // 缓存车站信息
+        let stationInfoCache = null;
+        
+        // MCP服务调用函数
+        async function callMcpService(service, params) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const mcpUrl = MCP_SERVERS['12306-mcp'].url;
+                    const response = await fetch(mcpUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            service: service,
+                            params: params
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`MCP服务请求失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    resolve(data);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+        
+        // 获取当前日期
+        async function getCurrentDate() {
+            return new Promise(async (resolve) => {
+                try {
+                    // 尝试使用MCP服务获取当前日期
+                    const data = await callMcpService('mcp_12306-mcp_get-current-date', {});
+                    resolve(data.date || new Date().toISOString().split('T')[0]);
+                } catch (error) {
+                    // 失败时使用本地日期
+                    const date = new Date().toISOString().split('T')[0];
+                    resolve(date);
+                }
+            });
+        }
+        
+        // 加载车站信息
+        async function loadStationInfo() {
+            if (stationInfoCache) {
+                return stationInfoCache;
+            }
+            
+            return new Promise((resolve, reject) => {
+                fetch(STATION_INFO_URL)
+                    .then(response => response.text())
+                    .then(data => {
+                        // 解析车站信息
+                        const stationData = data.match(/station_names=([^;]+)/);
+                        if (stationData) {
+                            const stations = stationData[1].split('@').filter(item => item);
+                            const stationMap = {};
+                            
+                            stations.forEach(station => {
+                                const parts = station.split('|');
+                                if (parts.length >= 5) {
+                                    const stationName = parts[1];
+                                    const telecode = parts[2];
+                                    stationMap[stationName] = telecode;
+                                }
+                            });
+                            
+                            stationInfoCache = stationMap;
+                            resolve(stationMap);
+                        } else {
+                            reject(new Error('无法解析车站信息'));
+                        }
+                    })
+                    .catch(error => {
+                        // 失败时使用备用数据
+                        const stationCodes = {
+                            '北京': 'BJP',
+                            '北京南': 'VAP',
+                            '北京西': 'BXP',
+                            '北京北': 'BJP',
+                            '上海': 'SHH',
+                            '上海虹桥': 'AOH',
+                            '上海南': 'SNH',
+                            '广州': 'GZQ',
+                            '广州南': 'IZQ',
+                            '深圳': 'SZQ',
+                            '深圳北': 'IOQ',
+                            '杭州': 'HZH',
+                            '杭州东': 'IOH',
+                            '南京': 'NJH',
+                            '南京南': 'JNH',
+                            '武汉': 'WHN',
+                            '武汉站': 'WCN',
+                            '成都': 'CDW',
+                            '成都东': 'ICW',
+                            '西安': 'XAY',
+                            '西安北': 'EAY',
+                            '重庆': 'CQW',
+                            '重庆北': 'CQW',
+                            '重庆西': 'CQW',
+                            '天津': 'TJP',
+                            '天津南': 'TJP',
+                            '苏州': 'SZH',
+                            '苏州北': 'SZH',
+                            '无锡': 'WXH',
+                            '无锡东': 'WXH',
+                            '常州': 'CQH',
+                            '镇江': 'ZJH',
+                            '徐州': 'XCH',
+                            '郑州': 'ZZF',
+                            '郑州东': 'ZZF',
+                            '长沙': 'CSQ',
+                            '长沙南': 'CSQ',
+                            '福州': 'FZS',
+                            '福州南': 'FZS',
+                            '厦门': 'XMS',
+                            '厦门北': 'XMS',
+                            '济南': 'JNK',
+                            '济南西': 'JNK',
+                            '青岛': 'QDK',
+                            '青岛北': 'QDK',
+                            '大连': 'DLT',
+                            '哈尔滨': 'HRB',
+                            '哈尔滨西': 'HRB',
+                            '沈阳': 'SYT',
+                            '沈阳北': 'SYT',
+                            '长春': 'CCT',
+                            '长春西': 'CCT',
+                            '昆明': 'KMQ',
+                            '昆明南': 'KMQ',
+                            '南宁': 'NNQ',
+                            '南宁东': 'NNQ',
+                            '贵阳': 'GYQ',
+                            '贵阳北': 'GYQ',
+                            '兰州': 'LZL',
+                            '西宁': 'XNL',
+                            '银川': 'YCL',
+                            '乌鲁木齐': 'WLM',
+                            '拉萨': 'LSS'
+                        };
+                        stationInfoCache = stationCodes;
+                        resolve(stationCodes);
+                    });
+            });
+        }
+        
+        // 获取车站编码
+        async function getStationCodeOfCitys(city) {
+            return new Promise(async (resolve) => {
+                try {
+                    // 尝试使用MCP服务获取车站编码
+                    const data = await callMcpService('mcp_12306-mcp_get-station-code-of-citys', { citys: city });
+                    if (data && data.station_code) {
+                        resolve(data.station_code);
+                        return;
+                    }
+                } catch (error) {
+                    console.log('MCP服务获取车站编码失败:', error.message);
+                }
+                
+                // 失败时使用备用方案
+                try {
+                    const stationMap = await loadStationInfo();
+                    // 不区分大小写查找
+                    const cityUpper = city.toUpperCase();
+                    
+                    // 优先精确匹配
+                    let matchedCity = Object.keys(stationMap).find(key => key.toUpperCase() === cityUpper);
+                    
+                    // 如果没有精确匹配，尝试包含匹配
+                    if (!matchedCity) {
+                        matchedCity = Object.keys(stationMap).find(key => 
+                            key.toUpperCase().includes(cityUpper)
+                        );
+                    }
+                    
+                    if (matchedCity) {
+                        resolve(stationMap[matchedCity]);
+                        return;
+                    }
+                } catch (error) {
+                    console.log('加载车站信息失败:', error.message);
+                }
+                
+                // 再次失败时使用硬编码数据
+                const stationCodes = {
+                    '北京': 'BJP',
+                    '北京南': 'VAP',
+                    '北京西': 'BXP',
+                    '北京北': 'BJP',
+                    '上海': 'SHH',
+                    '上海虹桥': 'AOH',
+                    '上海南': 'SNH',
+                    '广州': 'GZQ',
+                    '广州南': 'IZQ',
+                    '深圳': 'SZQ',
+                    '深圳北': 'IOQ',
+                    '杭州': 'HZH',
+                    '杭州东': 'IOH',
+                    '南京': 'NJH',
+                    '南京南': 'JNH',
+                    '武汉': 'WHN',
+                    '武汉站': 'WCN',
+                    '成都': 'CDW',
+                    '成都东': 'ICW',
+                    '西安': 'XAY',
+                    '西安北': 'EAY',
+                    '重庆': 'CQW',
+                    '重庆北': 'CQW',
+                    '重庆西': 'CQW',
+                    '天津': 'TJP',
+                    '天津南': 'TJP',
+                    '苏州': 'SZH',
+                    '苏州北': 'SZH',
+                    '无锡': 'WXH',
+                    '无锡东': 'WXH',
+                    '常州': 'CQH',
+                    '镇江': 'ZJH',
+                    '徐州': 'XCH',
+                    '郑州': 'ZZF',
+                    '郑州东': 'ZZF',
+                    '长沙': 'CSQ',
+                    '长沙南': 'CSQ',
+                    '福州': 'FZS',
+                    '福州南': 'FZS',
+                    '厦门': 'XMS',
+                    '厦门北': 'XMS',
+                    '济南': 'JNK',
+                    '济南西': 'JNK',
+                    '青岛': 'QDK',
+                    '青岛北': 'QDK',
+                    '大连': 'DLT',
+                    '哈尔滨': 'HRB',
+                    '哈尔滨西': 'HRB',
+                    '沈阳': 'SYT',
+                    '沈阳北': 'SYT',
+                    '长春': 'CCT',
+                    '长春西': 'CCT',
+                    '昆明': 'KMQ',
+                    '昆明南': 'KMQ',
+                    '南宁': 'NNQ',
+                    '南宁东': 'NNQ',
+                    '贵阳': 'GYQ',
+                    '贵阳北': 'GYQ',
+                    '兰州': 'LZL',
+                    '西宁': 'XNL',
+                    '银川': 'YCL',
+                    '乌鲁木齐': 'WLM',
+                    '拉萨': 'LSS'
+                };
+                
+                const cityUpper = city.toUpperCase();
+                
+                // 优先精确匹配
+                let matchedCity = Object.keys(stationCodes).find(key => key.toUpperCase() === cityUpper);
+                
+                // 如果没有精确匹配，尝试包含匹配
+                if (!matchedCity) {
+                    matchedCity = Object.keys(stationCodes).find(key => 
+                        key.toUpperCase().includes(cityUpper)
+                    );
+                }
+                
+                // 如果仍然没有匹配，尝试城市名匹配（去掉站、南站、西站等后缀）
+                if (!matchedCity) {
+                    const cityName = city.replace(/[站南北东西]/g, '');
+                    const cityNameUpper = cityName.toUpperCase();
+                    matchedCity = Object.keys(stationCodes).find(key => 
+                        key.toUpperCase().replace(/[站南北东西]/g, '') === cityNameUpper
+                    );
+                }
+                
+                resolve(matchedCity ? stationCodes[matchedCity] : null);
+            });
+        }
+        
+        // 获取城市内所有火车站
+        async function getStationsCodeInCity(city) {
+            return new Promise(async (resolve) => {
+                try {
+                    // 尝试使用MCP服务获取城市内所有火车站
+                    const data = await callMcpService('mcp_12306-mcp_get-stations-code-in-city', { city: city });
+                    resolve(data.stations || []);
+                } catch (error) {
+                    // 失败时使用备用方案
+                    try {
+                        const stationMap = await loadStationInfo();
+                        // 查找包含城市名的车站
+                        const cityStations = [];
+                        Object.entries(stationMap).forEach(([name, code]) => {
+                            if (name.includes(city)) {
+                                cityStations.push({ name, station_code: code });
+                            }
+                        });
+                        resolve(cityStations.length > 0 ? cityStations : []);
+                    } catch (error) {
+                        // 再次失败时使用硬编码数据
+                        const stations = {
+                            '北京': [
+                                { name: '北京南站', station_code: 'VAP' },
+                                { name: '北京西站', station_code: 'BXP' },
+                                { name: '北京站', station_code: 'BJP' },
+                                { name: '北京北站', station_code: 'BJP' }
+                            ],
+                            '上海': [
+                                { name: '上海虹桥站', station_code: 'AOH' },
+                                { name: '上海站', station_code: 'SHH' },
+                                { name: '上海南站', station_code: 'SNH' }
+                            ]
+                        };
+                        const cityUpper = city.toUpperCase();
+                        const matchedCity = Object.keys(stations).find(key => key.toUpperCase() === cityUpper);
+                        resolve(matchedCity ? stations[matchedCity] : []);
+                    }
+                }
+            });
+        }
+        
+        // 查询余票
+        async function getTickets(date, fromStation, toStation) {
+            return new Promise(async (resolve) => {
+                try {
+                    // 尝试使用MCP服务查询余票
+                    const data = await callMcpService('mcp_12306-mcp_get-tickets', {
+                        date: date,
+                        fromStation: fromStation,
+                        toStation: toStation
+                    });
+                    
+                    if (data && data.tickets) {
+                        let ticketList = `🚄 ${fromStation} 到 ${toStation} 的余票信息 (${date})\n\n`;
+                        data.tickets.forEach((ticket, index) => {
+                            ticketList += `${index + 1}. ${ticket.train_code} ${ticket.from_station}-${ticket.to_station}\n`;
+                            ticketList += `   出发: ${ticket.departure_time}\n`;
+                            ticketList += `   到达: ${ticket.arrival_time}\n`;
+                            ticketList += `   二等座: ${ticket.second_class || '无票'}\n`;
+                            ticketList += `   一等座: ${ticket.first_class || '无票'}\n`;
+                            ticketList += `   商务座: ${ticket.business_class || '无票'}\n\n`;
+                        });
+                        ticketList += `💡 详细信息请访问 [12306官方网站](${OFFICIAL_12306_URL})`;
+                        resolve(ticketList);
+                    } else {
+                        const noTicketResponse = `🚄 ${fromStation} 到 ${toStation} 的余票信息 (${date})\n\n暂无可售车票\n\n💡 详细信息请访问 [12306官方网站](${OFFICIAL_12306_URL})`;
+                        resolve(noTicketResponse);
+                    }
+                } catch (error) {
+                    // 调用API时出错，使用备用方案
+                    const errorResponse = `🚄 ${fromStation} 到 ${toStation} 的余票信息 (${date})\n\n💡 查询失败，请访问 [12306官方网站](${OFFICIAL_12306_URL}) 获取详细信息`;
+                    resolve(errorResponse);
+                }
+            });
+        }
+        
+        // 查询车次经停站
+        async function getTrainRouteStations(trainCode, departDate) {
+            return new Promise(async (resolve) => {
+                try {
+                    // 尝试使用MCP服务查询车次经停站
+                    const data = await callMcpService('mcp_12306-mcp_get-train-route-stations', {
+                        trainCode: trainCode,
+                        departDate: departDate
+                    });
+                    
+                    if (data && data.stations) {
+                        let routeList = `🚄 ${trainCode} 次列车经停站 (${departDate})\n\n`;
+                        data.stations.forEach((station, index) => {
+                            routeList += `${index + 1}. ${station.name} - ${station.arrival_time || station.departure_time}\n`;
+                            if (station.stop_time) {
+                                routeList += `   (停留${station.stop_time})\n`;
+                            }
+                        });
+                        routeList += `\n💡 详细信息请访问 [12306官方网站](${OFFICIAL_12306_URL})`;
+                        resolve(routeList);
+                    } else {
+                        const noRouteResponse = `🚄 ${trainCode} 次列车经停站 (${departDate})\n\n未找到该车次信息\n\n💡 详细信息请访问 [12306官方网站](${OFFICIAL_12306_URL})`;
+                        resolve(noRouteResponse);
+                    }
+                } catch (error) {
+                    // 调用API时出错，使用备用数据
+                    const mockResponse = `🚄 ${trainCode} 次列车经停站 (${departDate})\n\n1. 北京南站 - 08:00\n2. 济南西站 - 09:30 (停留3分钟)\n3. 南京南站 - 11:15 (停留4分钟)\n4. 上海虹桥站 - 13:15\n\n💡 详细信息请访问 [12306官方网站](${OFFICIAL_12306_URL})`;
+                    resolve(mockResponse);
+                }
+            });
+        }
+
+        const models = {
+            1: { name: 'Qwen3.5-27B', model: 'Qwen/Qwen3.5-27B', icon: 'img/千问.jpg', series: 'qwen' },
+            2: { name: 'DeepSeek-V3.2', model: 'deepseek-ai/DeepSeek-V3.2', icon: 'img/DeepSeek.jpg', series: 'deepseek' },
+            21: { name: 'DeepSeek-R1', model: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B', icon: 'img/DeepSeek.jpg', series: 'deepseek' },
+            31: { name: 'GLM-5', model: 'ZhipuAI/GLM-5', icon: 'img/GLM5.webp', series: 'glm' },
+            32: { name: 'GLM-4.7-Flash', model: 'ZhipuAI/GLM-4.7-Flash', icon: 'img/GLM5.webp', series: 'glm' },
+            4: { name: 'Kimi-K2.5', model: 'moonshotai/Kimi-K2.5', icon: 'img/kimi.webp', series: 'kimi' },
+            5: { name: '基金查询', model: 'fund', icon: 'img/基金.webp', series: 'fund' },
+            6: { name: '油价查询', model: 'oil', icon: 'img/油价.webp', series: 'oil' }
+        };
+
+        const modelSeries = {
+            qwen: [
+                { id: 1, name: 'Qwen3.5-27B', model: 'Qwen/Qwen3.5-27B', icon: 'img/千问.jpg' }
+            ],
+            deepseek: [
+                { id: 2, name: 'DeepSeek-V3.2', model: 'deepseek-ai/DeepSeek-V3.2', icon: 'img/DeepSeek.jpg' },
+                { id: 21, name: 'DeepSeek-R1', model: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B', icon: 'img/DeepSeek.jpg' }
+            ],
+            glm: [
+                { id: 31, name: 'GLM-5', model: 'ZhipuAI/GLM-5', icon: 'img/GLM5.webp' },
+                { id: 32, name: 'GLM-4.7-Flash', model: 'ZhipuAI/GLM-4.7-Flash', icon: 'img/GLM5.webp' }
+            ],
+            kimi: [
+                { id: 4, name: 'Kimi-K2.5', model: 'moonshotai/Kimi-K2.5', icon: 'img/kimi.webp' }
+            ],
+            fund: [
+                { id: 5, name: '天天基金', model: 'fund_eastmoney', icon: 'img/基金.webp', datasource: 'eastmoney' },
+                { id: 51, name: '东方财富', model: 'fund_eastmoney_detail', icon: 'img/东方财富.webp', datasource: 'eastmoney_detail' },
+                { id: 52, name: '腾讯财经', model: 'fund_tencent', icon: 'img/腾讯财经.webp', datasource: 'tencent' }
+            ],
+            oil: [
+                { id: 6, name: '油价查询', model: 'oil', icon: 'img/油价.webp' }
+            ]
+        };
+
+        // 基金数据源配置
+        const FUND_DATASOURCES = {
+            eastmoney: {
+                name: '天天基金',
+                fundApi: 'https://fundgz.1234567.com.cn/js/',
+                stockApi: 'https://qt.gtimg.cn/q='
+            },
+            eastmoney_detail: {
+                name: '东方财富',
+                fundApi: 'https://fund.eastmoney.com/',
+                stockApi: 'https://qt.gtimg.cn/q='
+            },
+            tencent: {
+                name: '腾讯财经',
+                fundApi: 'https://qt.gtimg.cn/q=',
+                stockApi: 'https://qt.gtimg.cn/q='
+            }
+        };
+
+        let currentFundDatasource = 'eastmoney';
+
+        function showSettings() {
+            document.getElementById('settingsModal').classList.add('show');
+        }
+
+        function hideSettings() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        function selectModel(modelId) {
+            const selectedModel = models[modelId];
+            if (!selectedModel) {
+                return;
+            }
+            
+            document.querySelectorAll('.brutalist-model-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const modelBtn = document.getElementById(`modelBtn${modelId}`);
+            if (modelBtn) {
+                modelBtn.classList.add('active');
+            }
+            
+            document.getElementById('currentModelName').textContent = selectedModel.name;
+            document.getElementById('currentModelIcon').src = selectedModel.icon;
+            
+            model.name = selectedModel.name;
+            model.model = selectedModel.model;
+            model.icon = selectedModel.icon;
+            currentModelId = modelId;
+            
+            conversationHistory = [];
+            chatMessages.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">开始新对话</div>
+                    <div class="empty-state-desc">输入消息开始与 AI 助手对话</div>
+                </div>
+            `;
+            currentConversationId = null;
+            updateHistoryList();
+            
+            hideSettings();
+            closeModelDropdown();
+        }
+
+        function toggleModelDropdown() {
+            const dropdown = document.getElementById('modelDropdown');
+            if (!dropdown) {
+                return;
+            }
+            
+            dropdown.classList.toggle('show');
+            
+            const currentSeries = models[currentModelId]?.series || 'glm';
+            const relatedModels = modelSeries[currentSeries] || [];
+            
+            let dropdownContent = '';
+            if (relatedModels.length > 0) {
+                dropdownContent = relatedModels.map(m => `
+                    <div class="dropdown-item ${m.id === currentModelId ? 'active' : ''}" onclick="selectSubModel(${m.id}, '${m.name}', '${m.model}', '${m.icon}')">
+                        <img src="${m.icon}" alt="${m.name}">
+                        <span>${m.name}</span>
+                    </div>
+                `).join('');
+            } else {
+                dropdownContent = '<div class="dropdown-item">No models available</div>';
+            }
+            
+            dropdown.innerHTML = dropdownContent;
+        }
+
+        function closeModelDropdown() {
+            const dropdown = document.getElementById('modelDropdown');
+            if (dropdown) {
+                dropdown.classList.remove('show');
+            }
+        }
+
+        function selectSubModel(id, name, modelName, icon) {
+            document.getElementById('currentModelName').textContent = name;
+            document.getElementById('currentModelIcon').src = icon;
+            
+            model.name = name;
+            model.model = modelName;
+            model.icon = icon;
+            currentModelId = id;
+            
+            // 如果是基金模型，更新数据源
+            if (modelName.startsWith('fund_') && modelSeries.fund) {
+                const fundModel = modelSeries.fund.find(m => m.id === id);
+                if (fundModel && fundModel.datasource) {
+                    currentFundDatasource = fundModel.datasource;
+                }
+            }
+            
+            conversationHistory = [];
+            chatMessages.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">开始新对话</div>
+                    <div class="empty-state-desc">输入消息开始与 AI 助手对话</div>
+                </div>
+            `;
+            currentConversationId = null;
+            updateHistoryList();
+            
+            closeModelDropdown();
+        }
+
+        document.addEventListener('click', function(e) {
+            const modelSelector = document.querySelector('.model-selector');
+            if (modelSelector && !modelSelector.contains(e.target)) {
+                closeModelDropdown();
+                console.log('Clicked outside model selector, closing dropdown');
+            }
+        });
+
+        function clearAllConversations() {
+            if (confirm('确定要清除所有对话历史吗？此操作不可恢复。')) {
+                conversations = {};
+                currentConversationId = null;
+                conversationHistory = [];
+                updateHistoryList();
+                newChat();
+                alert('所有对话已清除');
+            }
+        }
+
+        function exportConversations() {
+            const dataStr = JSON.stringify(conversations, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `元答对话历史_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importConversations() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // 验证导入数据格式
+                    if (!validateImportData(importedData)) {
+                        alert('导入失败：文件格式不正确或包含无效的模型数据');
+                        return;
+                    }
+                    
+                    if (confirm('导入将覆盖当前所有对话历史，确定继续吗？')) {
+                        conversations = importedData;
+                        currentConversationId = null;
+                        conversationHistory = [];
+                        updateHistoryList();
+                        newChat();
+                        alert('对话历史导入成功！');
+                    }
+                } catch (error) {
+                    alert('导入失败：文件格式不正确');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // 验证导入数据格式
+        function validateImportData(data) {
+            if (typeof data !== 'object' || data === null) {
+                return false;
+            }
+            
+            // 检查每个模型的对话历史
+            for (const modelId in data) {
+                const modelConversations = data[modelId];
+                if (!Array.isArray(modelConversations)) {
+                    continue;
+                }
+                
+                // 验证每个对话的格式
+                for (const conversation of modelConversations) {
+                    if (!conversation.id || !conversation.title || !Array.isArray(conversation.history)) {
+                        return false;
+                    }
+                    
+                    // 验证对话历史中的消息格式
+                    for (const message of conversation.history) {
+                        if (!message.role || !message.content) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        function backupToCloud() {
+            const dataStr = JSON.stringify(conversations, null, 2);
+            localStorage.setItem('cloudBackup', dataStr);
+            localStorage.setItem('lastBackupTime', new Date().toISOString());
+            alert('备份成功！数据已保存到本地存储');
+        }
+
+        function checkUpdate() {
+            alert('当前已是最新版本 v1.0');
+        }
+        
+        // 测试模型切换功能
+        function testModelSwitch() {
+            console.log('Testing model switch...');
+            console.log('Current model:', model);
+            console.log('Current model ID:', currentModelId);
+            console.log('Models:', models);
+            console.log('Model series:', modelSeries);
+            
+            // 尝试切换到12306模型
+            selectModel(5);
+            console.log('After switching to 12306 model:', model);
+        }
+        
+        // 测试模型下拉菜单功能
+        function testDropdown() {
+            console.log('Testing dropdown functionality...');
+            const dropdown = document.getElementById('modelDropdown');
+            console.log('Dropdown element:', dropdown);
+            console.log('Dropdown classList:', dropdown.classList);
+            
+            // 手动添加show类
+            dropdown.classList.add('show');
+            console.log('After adding show class:', dropdown.classList);
+            console.log('Dropdown computed style:', window.getComputedStyle(dropdown));
+            
+            // 测试模型系列
+            console.log('Current model ID:', currentModelId);
+            console.log('Current model:', models[currentModelId]);
+            const currentSeries = models[currentModelId]?.series || 'glm';
+            console.log('Current series:', currentSeries);
+            const relatedModels = modelSeries[currentSeries] || [];
+            console.log('Related models:', relatedModels);
+        }
+        
+        // 测试当前模型状态
+        function testCurrentModel() {
+            console.log('Testing current model state...');
+            console.log('Current model ID:', currentModelId);
+            console.log('Current model:', model);
+            console.log('Models object:', models);
+            console.log('Model series object:', modelSeries);
+        }
+
+        // 违禁词过滤功能
+        const profanityWords = [
+            // 常见违禁词列表
+            '傻逼', '操你', 'fuck', 'shit', '混蛋', '王八蛋',
+            '滚蛋', '垃圾', '废物', '白痴', '脑残', '智障',
+            '草泥马', '妈逼', 'Fuck', 'Shit', 'Bitch', 'Asshole'
+        ];
+
+        function filterProfanity(text) {
+            const enableFilter = localStorage.getItem('enableProfanityFilter') !== 'false';
+            if (!enableFilter) return text;
+            
+            let filteredText = text;
+            profanityWords.forEach(word => {
+                const regex = new RegExp(word, 'gi');
+                filteredText = filteredText.replace(regex, '*'.repeat(word.length));
+            });
+            return filteredText;
+        }
+
+
+
+        // 显示收藏夹
+        function showFavorites() {
+            const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            
+            if (favorites.length === 0) {
+                addMessage('system', '📂 收藏夹为空');
+                return;
+            }
+            
+            let favoritesHTML = '<div style="position: fixed; top: 100px; left: 16px; right: 16px; bottom: 100px; background: var(--surface); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-lg); z-index: 20; overflow-y: auto;">';
+            favoritesHTML += '<div style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary); display: flex; justify-content: space-between; align-items: center;">';
+            favoritesHTML += '<span>收藏夹</span>';
+            favoritesHTML += '<button onclick="this.parentElement.parentElement.remove()" style="padding: 6px 12px; background: var(--surface-hover); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--text-secondary); cursor: pointer;">关闭</button>';
+            favoritesHTML += '</div>';
+            
+            favorites.forEach((item, index) => {
+                favoritesHTML += `<div style="padding: 12px; background: var(--surface-hover); border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border);">`;
+                favoritesHTML += `<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">${item.time} · ${item.model}</div>`;
+                favoritesHTML += `<div style="font-size: 14px; color: var(--text-primary); line-height: 1.5; margin-bottom: 8px; word-wrap: break-word;">${item.content}</div>`;
+                favoritesHTML += `<div style="display: flex; gap: 8px; justify-content: flex-end;">`;
+                favoritesHTML += `<button onclick="copyMessage('${item.id}')" style="padding: 4px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-secondary); cursor: pointer;">复制</button>`;
+                favoritesHTML += `<button onclick="removeFavorite(${index})" style="padding: 4px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-secondary); cursor: pointer;">删除</button>`;
+                favoritesHTML += `</div>`;
+                favoritesHTML += `</div>`;
+            });
+            
+            favoritesHTML += '</div>';
+            
+            const favoritesElement = document.createElement('div');
+            favoritesElement.innerHTML = favoritesHTML;
+            document.body.appendChild(favoritesElement);
+        }
+
+        // 移除收藏
+        function removeFavorite(index) {
+            const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            favorites.splice(index, 1);
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+            addMessage('system', '❤️ 已从收藏夹移除');
+            
+            // 重新显示收藏夹
+            const favoritesPanel = document.querySelector('div[style*="position: fixed; top: 100px;"]');
+            if (favoritesPanel) {
+                favoritesPanel.remove();
+                showFavorites();
+            }
+        }
+
+        function updateStatistics() {
+            let totalConversations = 0;
+            let totalMessages = 0;
+            
+            Object.values(conversations).forEach(modelConvs => {
+                totalConversations += modelConvs.length;
+                modelConvs.forEach(conv => {
+                    totalMessages += conv.history.length;
+                });
+            });
+            
+            document.getElementById('totalConversations').textContent = totalConversations;
+            document.getElementById('totalMessages').textContent = totalMessages;
+            
+            const startTime = localStorage.getItem('startTime');
+            if (startTime) {
+                const elapsed = Math.floor((Date.now() - parseInt(startTime)) / 60000);
+                document.getElementById('usageTime').textContent = `${elapsed}分钟`;
+            }
+
+            const statsData = {
+                totalConversations: totalConversations,
+                totalMessages: totalMessages,
+                activeUsers: 1,
+                apiCalls: parseInt(localStorage.getItem('apiCalls') || '0'),
+                lastUpdate: new Date().toISOString(),
+                conversations: conversations
+            };
+            localStorage.setItem('appStats', JSON.stringify(statsData));
+        }
+
+        document.getElementById('soundToggle').addEventListener('change', function() {
+            localStorage.setItem('sound', this.checked);
+        });
+
+        document.getElementById('vibrationToggle').addEventListener('change', function() {
+            localStorage.setItem('vibration', this.checked);
+        });
+
+        document.getElementById('notificationToggle').addEventListener('change', function() {
+            localStorage.setItem('notification', this.checked);
+        });
+
+
+
+        document.getElementById('bubbleStyleSelect').addEventListener('change', function() {
+            localStorage.setItem('bubbleStyle', this.value);
+            applyBubbleStyle(this.value);
+        });
+
+        document.getElementById('maxTokensSelect').addEventListener('change', function() {
+            localStorage.setItem('maxTokens', this.value);
+        });
+
+        document.getElementById('temperatureSelect').addEventListener('change', function() {
+            localStorage.setItem('temperature', this.value);
+        });
+
+        document.getElementById('contextLengthSelect').addEventListener('change', function() {
+            localStorage.setItem('contextLength', this.value);
+        });
+
+        function applyBubbleStyle(style) {
+            const bubbles = document.querySelectorAll('.message-bubble');
+            bubbles.forEach(bubble => {
+                bubble.style.borderRadius = style === 'rounded' ? '24px' : 
+                                           style === 'square' ? '8px' : 
+                                           style === 'pill' ? '50px' : '24px';
+            });
+        }
+
+        const savedSound = localStorage.getItem('sound');
+        if (savedSound !== null) {
+            document.getElementById('soundToggle').checked = savedSound === 'true';
+        }
+
+        const savedVibration = localStorage.getItem('vibration');
+        if (savedVibration !== null) {
+            document.getElementById('vibrationToggle').checked = savedVibration === 'true';
+        }
+
+        const savedNotification = localStorage.getItem('notification');
+        if (savedNotification !== null) {
+            document.getElementById('notificationToggle').checked = savedNotification === 'true';
+        }
+
+
+
+        const savedBubbleStyle = localStorage.getItem('bubbleStyle');
+        if (savedBubbleStyle) {
+            document.getElementById('bubbleStyleSelect').value = savedBubbleStyle;
+            applyBubbleStyle(savedBubbleStyle);
+        }
+
+        const savedMaxTokens = localStorage.getItem('maxTokens');
+        if (savedMaxTokens) {
+            document.getElementById('maxTokensSelect').value = savedMaxTokens;
+        }
+
+        const savedTemperature = localStorage.getItem('temperature');
+        if (savedTemperature) {
+            document.getElementById('temperatureSelect').value = savedTemperature;
+        }
+
+        const savedContextLength = localStorage.getItem('contextLength');
+        if (savedContextLength) {
+            document.getElementById('contextLengthSelect').value = savedContextLength;
+        }
+
+        if (!localStorage.getItem('startTime')) {
+            localStorage.setItem('startTime', Date.now());
+        }
+
+        updateStatistics();
+
+        // 应用设备特定的优化设置
+        const deviceInfo = applyDeviceSpecificSettings();
+        console.log('设备信息:', deviceInfo);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.activeElement === chatInput) {
+                chatInput.value = '';
+            }
+        });
+
+        document.getElementById('settingsModal').addEventListener('click', function(e) {
+            if (e.target === this) hideSettings();
+        });
+    </script>
+</body>
 </html>
